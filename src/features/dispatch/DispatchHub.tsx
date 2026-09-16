@@ -11,7 +11,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExportModal } from "@/components/export/ExportModal";
 import type { DispatchOrder, DispatchStatus } from "@/types/dispatch";
-import { useCourseUp } from "@/context/CourseUpContext";
+import { useCourseUp } from "@/context/useCourseUp";
 import { createExportBundle } from "@/services/exportService";
 import {
   computeGlobalStatus,

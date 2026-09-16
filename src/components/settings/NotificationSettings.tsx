@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useCourseUp } from "@/context/CourseUpContext";
+import { useCourseUp } from "@/context/useCourseUp";
 import {
   getNotificationPermission,
   requestNotificationPermission,

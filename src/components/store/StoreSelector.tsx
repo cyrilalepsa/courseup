@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { LocateFixed, MapPin, Radar, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useCourseUp } from "@/context/CourseUpContext";
+import { useCourseUp } from "@/context/useCourseUp";
 import {
   BRAND_LABELS,
   DRIVE_BRANDS,
