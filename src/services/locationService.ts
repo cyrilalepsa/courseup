@@ -270,3 +270,122 @@ export const BRAND_LABELS: Record<StoreBrand, string> = {
   intermarche: "Intermarché",
   selys: "Selys",
 };
+
+/** Seuil d'alerte proximité drive / Selys (km). */
+export const PROXIMITY_ALERT_KM = 2;
+
+const PROXIMITY_COOLDOWN_MS = 30 * 60 * 1000;
+
+export interface GeolocationWatchOptions {
+  enableHighAccuracy?: boolean;
+  maximumAge?: number;
+  timeout?: number;
+}
+
+export interface ProximityHit {
+  store: DriveStore;
+  distanceKm: number;
+  kind: "selys" | "drive";
+}
+
+const DRIVE_BRANDS_FOR_PROXIMITY: StoreBrand[] = [
+  "leclerc",
+  "carrefour",
+  "auchan",
+  "intermarche",
+];
+
+export function startConfigurableLocationWatch(
+  onPosition: (coords: GeoCoordinates) => void,
+  onError?: (error: GeolocationPositionError) => void,
+  options?: GeolocationWatchOptions,
+): () => void {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    return () => {};
+  }
+
+  const watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      onPosition({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+      });
+    },
+    onError,
+    {
+      enableHighAccuracy: options?.enableHighAccuracy ?? false,
+      maximumAge: options?.maximumAge ?? 30_000,
+      timeout: options?.timeout ?? 15_000,
+    },
+  );
+
+  return () => navigator.geolocation.clearWatch(watchId);
+}
+
+export function collectProximityTargets(
+  nearbyStores: DriveStore[],
+  selectedStores: Partial<Record<StoreBrand, DriveStore>>,
+): DriveStore[] {
+  const map = new Map<string, DriveStore>();
+
+  for (const store of nearbyStores) {
+    if (store.brand === "selys") map.set(store.id, store);
+  }
+
+  for (const brand of DRIVE_BRANDS_FOR_PROXIMITY) {
+    const selected = selectedStores[brand];
+    if (selected) map.set(selected.id, selected);
+  }
+
+  if (selectedStores.selys) {
+    map.set(selectedStores.selys.id, selectedStores.selys);
+  }
+
+  return [...map.values()];
+}
+
+export function distanceToStore(user: GeoCoordinates, store: DriveStore): number {
+  return haversineKm(user, { lat: store.lat, lng: store.lng });
+}
+
+export function scanProximityAlert(
+  user: GeoCoordinates,
+  targets: DriveStore[],
+  withinKm: number = PROXIMITY_ALERT_KM,
+): ProximityHit | null {
+  let best: ProximityHit | null = null;
+
+  for (const store of targets) {
+    const distanceKm = distanceToStore(user, store);
+    if (distanceKm > withinKm) continue;
+    if (!best || distanceKm < best.distanceKm) {
+      best = {
+        store,
+        distanceKm: Number(distanceKm.toFixed(2)),
+        kind: store.brand === "selys" ? "selys" : "drive",
+      };
+    }
+  }
+
+  return best;
+}
+
+export function isProximityCooldownActive(
+  storeId: string,
+  cooldownMap: Record<string, number>,
+  now = Date.now(),
+): boolean {
+  const until = cooldownMap[storeId];
+  return typeof until === "number" && until > now;
+}
+
+export function markProximityCooldown(
+  cooldownMap: Record<string, number>,
+  storeId: string,
+  now = Date.now(),
+): Record<string, number> {
+  return {
+    ...cooldownMap,
+    [storeId]: now + PROXIMITY_COOLDOWN_MS,
+  };
+}

@@ -22,11 +22,11 @@ const STEP_COPY: Record<
       "Scan, collage ou ponts écosystème — puis exportez la liste (partage, QR, fichiers) avant l'optimisation N2O.",
   },
   optimizer: {
-    sprint: "Sprint 2",
-    step: "Étape 2",
-    title: "CourseUp — Optimiseur & magasins favoris",
+    sprint: "Sprint 3",
+    step: "Étape 3",
+    title: "CourseUp — Notifications & proximité",
     description:
-      "Choisissez vos drives et commerces Selys à proximité. L'optimiseur affiche les points de retrait précis et la distance totale des trajets.",
+      "Alertes PWA : proximité Selys/drives (< 2 km), paliers cashback N2O et rappels de retrait drive.",
   },
   dispatch: {
     sprint: "Sprint 3",

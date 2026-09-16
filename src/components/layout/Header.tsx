@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Bell,
   CloudOff,
   Download,
   MapPin,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { StoreSelector } from "@/components/store/StoreSelector";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { useCourseUp } from "@/context/CourseUpContext";
 
 type ConnectionStatus = "online" | "offline";
@@ -28,6 +30,8 @@ export function Header() {
     locationPrefs,
     storeSelectorOpen,
     setStoreSelectorOpen,
+    notificationSettingsOpen,
+    setNotificationSettingsOpen,
   } = useCourseUp();
   const [connection, setConnection] = useState<ConnectionStatus>(
     typeof navigator !== "undefined" && navigator.onLine ? "online" : "offline",
@@ -96,6 +100,15 @@ export function Header() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={() => setNotificationSettingsOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] font-medium text-slate-100 backdrop-blur-md transition hover:bg-white/20"
+                aria-label="Notifications"
+              >
+                <Bell className="h-3.5 w-3.5 text-cyan-300" />
+                <span className="hidden sm:inline">Notifs</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setStoreSelectorOpen(true)}
                 className="hidden items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] font-medium text-slate-100 backdrop-blur-md transition hover:bg-white/20 sm:inline-flex"
               >
@@ -157,6 +170,11 @@ export function Header() {
         variant="modal"
         open={storeSelectorOpen}
         onClose={() => setStoreSelectorOpen(false)}
+      />
+
+      <NotificationSettings
+        open={notificationSettingsOpen}
+        onClose={() => setNotificationSettingsOpen(false)}
       />
     </>
   );
