@@ -6,6 +6,7 @@ import {
   MapPin,
   RefreshCw,
   Sparkles,
+  Upload,
   Wrench,
 } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -28,6 +29,8 @@ export function DemoCockpitBar() {
     triggerDemoGeofenceAlert,
     triggerDemoN2OSync,
     purgeLocalCourseUpData,
+    triggerDemoDriveApiPush,
+    triggerDemoHeritiaExport,
   } = useCourseUp();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -109,6 +112,32 @@ export function DemoCockpitBar() {
               </div>
 
               <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="neria-cta-primary col-span-2 flex items-center justify-center gap-1 px-2 py-2 text-[11px]"
+                  onClick={() =>
+                    run("Push API Drive simulé", async () => {
+                      await triggerDemoDriveApiPush();
+                    })
+                  }
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Simuler push API Drive
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="neria-cta-n2o col-span-2 flex items-center justify-center gap-1 px-2 py-2 text-[11px]"
+                  onClick={() =>
+                    run("Export Heritia forcé", async () => {
+                      await triggerDemoHeritiaExport();
+                    })
+                  }
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Forcer export Heritia
+                </button>
                 <button
                   type="button"
                   disabled={busy}

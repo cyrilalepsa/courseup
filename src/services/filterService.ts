@@ -10,7 +10,8 @@ import { normalizeItemAttributes } from "@/services/itemAttributeService";
 export type FilterPredicate = (attributes: ItemAttributes) => boolean;
 
 const FILTER_PREDICATES: Record<FilterPredicateId, FilterPredicate> = {
-  low_glycemic: (attrs) => (attrs.glycemicIndex ?? 100) <= 55,
+  low_glycemic: (attrs) =>
+    attrs.isLowGlycemic === true || (attrs.glycemicIndex ?? 100) <= 55,
   gluten_free: (attrs) => attrs.isGlutenFree === true,
   low_sodium: (attrs) => attrs.isLowSodium === true,
   nutri_score_ab: (attrs) =>

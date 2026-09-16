@@ -10,6 +10,7 @@ import type {
   NotificationPreferences,
 } from "@/types/notifications";
 import type { OptimizedBasket } from "@/types/optimizer";
+import type { HeritiaSyncNotice } from "@/types/heritia";
 import type {
   DriveStore,
   LocationPreferences,
@@ -26,6 +27,7 @@ export interface CourseUpContextValue {
   gamificationBadges: GamificationBadgeRecord[];
   checkoutWallet: CheckoutWalletState;
   cockpitDemoProfile: CockpitDemoProfile;
+  heritiaSyncNotice: HeritiaSyncNotice | null;
   locationPrefs: LocationPreferences;
   nearbyStores: DriveStore[];
   selectedStores: Partial<Record<StoreBrand, DriveStore>>;
@@ -49,6 +51,10 @@ export interface CourseUpContextValue {
   triggerDemoGeofenceAlert: () => Promise<boolean>;
   triggerDemoN2OSync: () => Promise<void>;
   purgeLocalCourseUpData: () => Promise<void>;
+  completeShoppingHeritiaSync: (checkedItemIds?: string[]) => Promise<HeritiaSyncNotice | null>;
+  triggerDemoDriveApiPush: () => Promise<void>;
+  triggerDemoHeritiaExport: () => Promise<void>;
+  clearHeritiaSyncNotice: () => void;
   saveOrder: (order: DispatchOrder) => Promise<void>;
   setSearchRadius: (radius: SearchRadiusKm) => void;
   setManualLocation: (postalCode: string, city: string) => void;
