@@ -79,7 +79,9 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   const [selectedStores, setSelectedStores] = useState<
     Partial<Record<StoreBrand, DriveStore>>
   >({});
-  const [selysGeofenceActive, setSelysGeofenceActive] = useState(false);
+  const [liveCoordinates, setLiveCoordinates] = useState(
+    DEFAULT_LOCATION_PREFS.coordinates,
+  );
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [storeSelectorOpen, setStoreSelectorOpen] = useState(false);
@@ -111,27 +113,29 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isHydrated) return;
-    const selysStore = selectedStores.selys;
-    if (!selysStore?.geofenceRadiusM) {
-      setSelysGeofenceActive(false);
-      return;
-    }
+    setLiveCoordinates(locationPrefs.coordinates);
+  }, [locationPrefs.coordinates]);
 
-    const check = (coords: { lat: number; lng: number }) => {
-      setSelysGeofenceActive(isInsideGeofence(coords, selysStore));
-    };
-
-    check(locationPrefs.coordinates);
-
-    if (!navigator.geolocation) return undefined;
+  useEffect(() => {
+    if (!isHydrated || !navigator.geolocation) return undefined;
     const watchId = navigator.geolocation.watchPosition(
-      (pos) => check({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) => {
+        setLiveCoordinates({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+      },
       () => undefined,
       { enableHighAccuracy: false, maximumAge: 30_000, timeout: 15_000 },
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [isHydrated, locationPrefs.coordinates, selectedStores.selys]);
+  }, [isHydrated]);
+
+  const selysGeofenceActive = useMemo(() => {
+    const selysStore = selectedStores.selys;
+    if (!selysStore?.geofenceRadiusM) return false;
+    return isInsideGeofence(liveCoordinates, selysStore);
+  }, [liveCoordinates, selectedStores.selys]);
 
   const setItems = useCallback((next: IngestedItem[]) => {
     setItemsState(next);
