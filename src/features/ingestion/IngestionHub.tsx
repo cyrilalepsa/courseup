@@ -1,10 +1,12 @@
 import { motion } from "framer-motion";
-import { Camera, FileUp, Link2, Type } from "lucide-react";
+import { Camera, FileUp, Link2, Share2, Type } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ExportModal } from "@/components/export/ExportModal";
 import { useCourseUp } from "@/context/CourseUpContext";
+import { createExportBundle } from "@/services/exportService";
 import { parseReceiptText } from "@/services/textParserService";
 import type { IngestedItem } from "@/types/ingestion";
-import { EcosystemBridge } from "./EcosystemBridge";
+import { EcosystemBridge } from "@/components/ecosystem/EcosystemBridge";
 import { FileUploadZone } from "./FileUploadZone";
 import { ParsedItemsPreview } from "./ParsedItemsPreview";
 import { TicketScanZone } from "./TicketScanZone";
@@ -26,6 +28,18 @@ export function IngestionHub({ onOptimize }: IngestionHubProps) {
   const { items, setItems } = useCourseUp();
   const [activeTab, setActiveTab] = useState<TabId>("scan");
   const [textValue, setTextValue] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportSession, setExportSession] = useState(0);
+
+  const openExportModal = useCallback(() => {
+    setExportSession((n) => n + 1);
+    setExportOpen(true);
+  }, []);
+
+  const exportBundle = useMemo(
+    () => createExportBundle("ingestion", items),
+    [items],
+  );
 
   const parsedPreview = useMemo(
     () => (textValue.trim() ? parseReceiptText(textValue, "text") : []),
@@ -92,7 +106,9 @@ export function IngestionHub({ onOptimize }: IngestionHubProps) {
       <div className="mt-4 min-h-[200px]">
         {activeTab === "scan" && <TicketScanZone onItemsExtracted={replaceItems} />}
         {activeTab === "file" && <FileUploadZone onItemsExtracted={replaceItems} />}
-        {activeTab === "bridge" && <EcosystemBridge onItemsExtracted={mergeItems} />}
+        {activeTab === "bridge" && (
+          <EcosystemBridge showImport showExport={false} onItemsExtracted={mergeItems} items={items} />
+        )}
         {activeTab === "text" && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -120,6 +136,27 @@ export function IngestionHub({ onOptimize }: IngestionHubProps) {
           </motion.div>
         )}
       </div>
+
+      {items.length > 0 && (
+        <motion.button
+          type="button"
+          onClick={openExportModal}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/40 bg-white/95 px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Share2 className="h-4 w-4 text-blue-600" />
+          Exporter / Partager la liste
+        </motion.button>
+      )}
+
+      <ExportModal
+        key={exportSession}
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        bundle={exportBundle}
+      />
 
       <ParsedItemsPreview items={items} onChange={setItems} onOptimize={onOptimize} />
     </section>
