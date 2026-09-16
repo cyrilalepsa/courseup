@@ -9,9 +9,10 @@ const CATEGORIES: ItemCategory[] = ["frais", "épicerie", "boissons", "autre"];
 interface ParsedItemsPreviewProps {
   items: IngestedItem[];
   onChange: (items: IngestedItem[]) => void;
+  onOptimize: () => void;
 }
 
-export function ParsedItemsPreview({ items, onChange }: ParsedItemsPreviewProps) {
+export function ParsedItemsPreview({ items, onChange, onOptimize }: ParsedItemsPreviewProps) {
   const updateItem = useCallback(
     (id: string, patch: Partial<IngestedItem>) => {
       onChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
@@ -152,6 +153,7 @@ export function ParsedItemsPreview({ items, onChange }: ParsedItemsPreviewProps)
 
       <motion.button
         type="button"
+        onClick={onOptimize}
         className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-accent px-4 py-3.5 text-sm font-bold text-navy shadow-[0_8px_32px_-8px_rgba(16,185,129,0.55)] transition hover:brightness-110"
         whileTap={{ scale: 0.98 }}
       >
