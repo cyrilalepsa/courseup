@@ -4,6 +4,7 @@ import {
   CloudOff,
   Download,
   MapPin,
+  ScanLine,
   ShoppingBag,
   Store,
   Wifi,
@@ -28,10 +29,14 @@ function detectStandalone(): boolean {
 interface HeaderProps {
   shoppingReady?: boolean;
   onStartInStore?: () => void;
+  onOpenCheckoutPass?: () => void;
+  checkoutPassReady?: boolean;
+  onOpenN2ODashboard?: () => void;
 }
 
 export function Header(props: HeaderProps = {}) {
-  const { shoppingReady, onStartInStore } = props;
+  const { shoppingReady, onStartInStore, onOpenCheckoutPass, checkoutPassReady, onOpenN2ODashboard } =
+    props;
   const {
     n2oBalance,
     locationPrefs,
@@ -105,6 +110,17 @@ export function Header(props: HeaderProps = {}) {
 
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             <div className="flex items-center gap-2">
+              {checkoutPassReady && onOpenCheckoutPass && (
+                <motion.button
+                  type="button"
+                  onClick={onOpenCheckoutPass}
+                  className="neria-cta-checkout"
+                  whileTap={{ scale: 0.96 }}
+                >
+                  <ScanLine className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Pass Caisse</span>
+                </motion.button>
+              )}
               {shoppingReady && onStartInStore && (
                 <motion.button
                   type="button"
@@ -160,11 +176,17 @@ export function Header(props: HeaderProps = {}) {
               )}
             </div>
 
-            <motion.div className="neria-badge-n2o" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <motion.button
+              type="button"
+              className="neria-badge-n2o"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={onOpenN2ODashboard}
+            >
               {!isOnline && <CloudOff className="h-3 w-3 text-violet-600" />}
               <span>{n2oBalance.toLocaleString("fr-FR")} N2O</span>
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
-            </motion.div>
+            </motion.button>
           </div>
         </div>
       </header>

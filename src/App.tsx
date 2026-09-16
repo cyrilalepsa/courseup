@@ -1,12 +1,15 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { CheckoutPassModal } from "@/components/checkout/CheckoutPassModal";
+import { N2ODashboard } from "@/components/dashboard/N2ODashboard";
 import { Header } from "@/components/layout/Header";
 import { InStoreMode } from "@/components/instore/InStoreMode";
 import { useCourseUp } from "@/context/CourseUpContext";
 import { DispatchHub } from "@/features/dispatch/DispatchHub";
 import { IngestionHub } from "@/features/ingestion/IngestionHub";
 import { OptimizerHub } from "@/features/optimizer/OptimizerHub";
+import { createExportBundle } from "@/services/exportService";
 import type { OptimizedBasket } from "@/types/optimizer";
 
 type AppStep = "ingestion" | "optimizer" | "dispatch";
@@ -24,25 +27,45 @@ const STEP_COPY: Record<
   },
   optimizer: {
     sprint: "Sprint 4",
-    step: "Étape 1",
-    title: "CourseUp — Optimiseur & Mode In-Store",
+    step: "Étape 2",
+    title: "CourseUp — Optimiseur, Pass Caisse & Cashback N2O",
     description:
-      "Filtres nutrition configurables, panier optimisé, puis mode magasin (macro-rayons réordonnables, badges et coche tactile).",
+      "Filtres nutrition, panier optimisé, Pass Caisse (QR + fidélité) et crédit N2O selon vos économies réelles.",
   },
   dispatch: {
-    sprint: "Sprint 3",
-    step: "Étape 2",
-    title: "CourseUp — Export, QR & passerelles NeriaCorp",
+    sprint: "Sprint 4",
+    step: "Étape 3",
+    title: "CourseUp — Selys Marketplace, Dashboard N2O & Badges",
     description:
-      "Partagez votre panier optimisé (Web Share, QR pass drive/Selys, fichiers TXT/PDF) et synchronisez Heritia & MamanDouce.",
+      "Dispatch multi-enseignes, redirection Selys Click & Collect, tableau N2O, rewards artisans et sync Heritia.",
   },
 };
 
 export default function App() {
-  const { items, clearCart } = useCourseUp();
+  const {
+    items,
+    clearCart,
+    n2oBalance,
+    cashbackLedger,
+    gamificationBadges,
+    checkoutWallet,
+    redeemMerchantReward,
+  } = useCourseUp();
   const [step, setStep] = useState<AppStep>("ingestion");
   const [optimizedBasket, setOptimizedBasket] = useState<OptimizedBasket | null>(null);
   const [inStoreOpen, setInStoreOpen] = useState(false);
+  const [checkoutPassOpen, setCheckoutPassOpen] = useState(false);
+  const [n2oDashboardOpen, setN2oDashboardOpen] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+
+  const checkoutBundle = useMemo(() => {
+    if (!optimizedBasket) return null;
+    return createExportBundle(
+      step === "dispatch" ? "dispatch" : "optimizer",
+      items,
+      optimizedBasket,
+    );
+  }, [items, optimizedBasket, step]);
 
   const handleOptimize = useCallback(() => {
     setStep("optimizer");
@@ -85,11 +108,26 @@ export default function App() {
   const copy = STEP_COPY[step];
   const canStartInStore =
     !!optimizedBasket && items.length > 0 && (step === "optimizer" || step === "dispatch");
+  const canOpenCheckoutPass = !!optimizedBasket && items.length > 0;
+
+  const handleRedeemReward = useCallback(
+    (rewardId: string) => {
+      setRedeemError(null);
+      const ok = redeemMerchantReward(rewardId);
+      if (!ok) setRedeemError("Solde N2O insuffisant pour cet échange.");
+    },
+    [redeemMerchantReward],
+  );
 
   return (
     <div className="neria-app-shell">
       <Header
         shoppingReady={canStartInStore}
+        checkoutPassReady={canOpenCheckoutPass}
+        onOpenCheckoutPass={
+          canOpenCheckoutPass ? () => setCheckoutPassOpen(true) : undefined
+        }
+        onOpenN2ODashboard={() => setN2oDashboardOpen(true)}
         onStartInStore={
           canStartInStore && optimizedBasket
             ? () => handleStartInStore(optimizedBasket)
@@ -178,9 +216,30 @@ export default function App() {
             items={items}
             basket={optimizedBasket}
             onClose={() => setInStoreOpen(false)}
+            onOpenCheckoutPass={() => setCheckoutPassOpen(true)}
           />
         )}
       </AnimatePresence>
+
+      {optimizedBasket && checkoutBundle && (
+        <CheckoutPassModal
+          open={checkoutPassOpen}
+          onClose={() => setCheckoutPassOpen(false)}
+          items={items}
+          basket={optimizedBasket}
+          wallet={checkoutWallet}
+        />
+      )}
+
+      <N2ODashboard
+        open={n2oDashboardOpen}
+        onClose={() => setN2oDashboardOpen(false)}
+        n2oBalance={n2oBalance}
+        ledger={cashbackLedger}
+        badges={gamificationBadges}
+        onRedeemReward={handleRedeemReward}
+        redeemError={redeemError}
+      />
     </div>
   );
 }

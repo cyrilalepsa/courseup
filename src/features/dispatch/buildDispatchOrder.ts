@@ -1,3 +1,6 @@
+import {
+  computeCashbackCreditFromBasket,
+} from "@/services/cashbackService";
 import type {
   DispatchOrder,
   DispatchStatus,
@@ -67,6 +70,7 @@ export function createDispatchOrder(basket: OptimizedBasket): DispatchOrder {
 
   const driveCheckouts = driveSplits.map((split, index) => buildDriveCheckout(split, index));
   const selysVoucher = selysSplit ? buildSelysVoucher(selysSplit) : null;
+  const cashback = computeCashbackCreditFromBasket(basket);
 
   return {
     id: `ord-${Date.now().toString(36)}`,
@@ -76,7 +80,7 @@ export function createDispatchOrder(basket: OptimizedBasket): DispatchOrder {
     selysVoucher,
     totalSpent: basket.savings.optimizedTotal,
     totalSavings: basket.savings.savingsAmount,
-    totalN2OCredited: basket.n2o.pointsEarned,
+    totalN2OCredited: cashback.tokensGranted,
     globalStatus: "pending",
   };
 }

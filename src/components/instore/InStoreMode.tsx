@@ -5,6 +5,7 @@ import {
   Check,
   ChevronLeft,
   Clock3,
+  ScanLine,
   ShoppingBasket,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -28,13 +29,14 @@ interface InStoreModeProps {
   items: IngestedItem[];
   basket: OptimizedBasket;
   onClose: () => void;
+  onOpenCheckoutPass?: () => void;
 }
 
 function lineTotal(item: IngestedItem): number {
   return Number((estimateUnitPrice(item) * item.quantity).toFixed(2));
 }
 
-export function InStoreMode({ items, basket, onClose }: InStoreModeProps) {
+export function InStoreMode({ items, basket, onClose, onOpenCheckoutPass }: InStoreModeProps) {
   const storeId = resolveInStoreShoppingStoreId(basket);
   const enrichedItems = useMemo(() => ensureItemAttributesList(items), [items]);
 
@@ -189,7 +191,19 @@ export function InStoreMode({ items, basket, onClose }: InStoreModeProps) {
               Parcours {storeId.toUpperCase()} · macro-rayons
             </p>
           </div>
-          <ShoppingBasket className="h-6 w-6 text-cyan-300" />
+          <div className="flex shrink-0 items-center gap-2">
+            {onOpenCheckoutPass && (
+              <button
+                type="button"
+                onClick={onOpenCheckoutPass}
+                className="neria-cta-checkout text-[10px]"
+              >
+                <ScanLine className="h-3.5 w-3.5" />
+                Pass
+              </button>
+            )}
+            <ShoppingBasket className="h-6 w-6 text-cyan-300" />
+          </div>
         </div>
 
         <div className="mx-auto mt-3 max-w-lg space-y-2">

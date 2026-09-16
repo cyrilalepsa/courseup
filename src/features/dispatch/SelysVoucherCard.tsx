@@ -7,9 +7,14 @@ import type { DispatchStatus, SelysVoucher } from "@/types/dispatch";
 interface SelysVoucherCardProps {
   voucher: SelysVoucher;
   onStatusChange: (id: string, status: DispatchStatus) => void;
+  onOpenMarketplace?: () => void;
 }
 
-export function SelysVoucherCard({ voucher, onStatusChange }: SelysVoucherCardProps) {
+export function SelysVoucherCard({
+  voucher,
+  onStatusChange,
+  onOpenMarketplace,
+}: SelysVoucherCardProps) {
   const [generated, setGenerated] = useState(voucher.status !== "pending");
 
   const generatePass = () => {
@@ -84,6 +89,15 @@ export function SelysVoucherCard({ voucher, onStatusChange }: SelysVoucherCardPr
       </div>
 
       <div className="flex flex-col gap-2 border-t border-slate-200 p-4 sm:flex-row">
+        {onOpenMarketplace && (
+          <button
+            type="button"
+            onClick={onOpenMarketplace}
+            className="neria-cta-primary inline-flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm"
+          >
+            Selys Marketplace · Click &amp; Collect
+          </button>
+        )}
         {!generated ? (
           <motion.button
             type="button"
