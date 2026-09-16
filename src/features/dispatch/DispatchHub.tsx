@@ -61,11 +61,17 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
 
   useEffect(() => {
     if (!allDone || orderPersistedRef.current) return;
+    const creditKey = `courseup:n2o-credited:${order.id}`;
+    if (sessionStorage.getItem(creditKey)) {
+      orderPersistedRef.current = true;
+      return;
+    }
     orderPersistedRef.current = true;
+    sessionStorage.setItem(creditKey, "1");
     const finalized: DispatchOrder = { ...order, globalStatus: "completed" };
     void saveOrder(finalized);
     addN2OBalance(order.totalN2OCredited);
-  }, [addN2OBalance, allDone, order.id, order.totalN2OCredited, saveOrder]);
+  }, [addN2OBalance, allDone, order, saveOrder]);
 
   return (
     <motion.div
