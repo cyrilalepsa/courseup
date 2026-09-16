@@ -8,7 +8,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   buildHeritiaDeeplink,
   buildMamanDouceDeeplink,
@@ -16,6 +16,8 @@ import {
   itemsForHeritiaExport,
   itemsForMamanDouceExport,
 } from "@/services/exportService";
+import { getActiveBridges, subscribeBridgeRegistry } from "@/services/bridgeRegistryService";
+import type { NeriaBridgeDefinition } from "@/types/bridge";
 import type { ExportBundle } from "@/types/export";
 import type { IngestedItem } from "@/types/ingestion";
 import type { OptimizedBasket } from "@/types/optimizer";
@@ -25,53 +27,34 @@ import {
   MAMANDOUCE_IMPORT,
 } from "@/features/ingestion/mockIngestion";
 
-type BridgeId = "heritia" | "mamandouce";
+type BridgeId = string;
 
 interface EcosystemBridgeProps {
   onItemsExtracted?: (items: IngestedItem[]) => void;
-  /** Affiche les actions d'import depuis Heritia / MamanDouce. */
   showImport?: boolean;
-  /** Affiche les exports vers le frigo Heritia et la liste familiale MamanDouce. */
   showExport?: boolean;
   exportBundle?: ExportBundle;
   items?: IngestedItem[];
   basket?: OptimizedBasket;
 }
 
-const cards: {
-  id: BridgeId;
-  app: string;
-  title: string;
-  subtitle: string;
-  detail: string;
-  exportTitle: string;
-  exportDetail: string;
-  icon: typeof CalendarHeart;
-  accent: string;
-}[] = [
-  {
-    id: "heritia",
-    app: "Heritia",
-    title: "Planning Repas",
-    subtitle: "Importer le menu de la semaine",
-    detail: "12 ingrédients extraits de 5 recettes",
-    exportTitle: "Frigo Heritia",
-    exportDetail: "Produits frais → suivi DLC & recettes anti-gaspillage",
-    icon: CalendarHeart,
-    accent: "from-rose-100 to-orange-50",
-  },
-  {
-    id: "mamandouce",
-    app: "MamanDouce",
-    title: "Gestion Foyer",
-    subtitle: "Importer la liste de courses partagée",
-    detail: "8 produits de la maison",
-    exportTitle: "Liste familiale",
-    exportDetail: "Sync cagnotte & programme courses partagées",
-    icon: Home,
-    accent: "from-violet-100 to-cyan-50",
-  },
-];
+const ICONS: Record<string, typeof CalendarHeart> = {
+  heritia: CalendarHeart,
+  mamandouce: Home,
+};
+
+function bridgeIcon(id: string): typeof CalendarHeart {
+  return ICONS[id] ?? Sparkles;
+}
+
+function supportsDirection(
+  bridge: NeriaBridgeDefinition,
+  direction: "import" | "export",
+): boolean {
+  return (
+    bridge.directions.includes(direction) || bridge.directions.includes("bidirectional")
+  );
+}
 
 export function EcosystemBridge({
   onItemsExtracted,
@@ -81,8 +64,11 @@ export function EcosystemBridge({
   items = [],
   basket,
 }: EcosystemBridgeProps) {
+  const [bridges, setBridges] = useState<NeriaBridgeDefinition[]>(() => getActiveBridges());
   const [loadingId, setLoadingId] = useState<BridgeId | null>(null);
   const [successId, setSuccessId] = useState<BridgeId | null>(null);
+
+  useEffect(() => subscribeBridgeRegistry(setBridges), []);
 
   const bundle =
     exportBundle ??
@@ -95,10 +81,12 @@ export function EcosystemBridge({
       setSuccessId(null);
 
       window.setTimeout(() => {
-        const payload =
-          id === "heritia"
-            ? ecosystemToItems(HERITIA_IMPORT.items, "heritia")
-            : ecosystemToItems(MAMANDOUCE_IMPORT.items, "mamandouce");
+        let payload: IngestedItem[] = [];
+        if (id === "heritia") {
+          payload = ecosystemToItems(HERITIA_IMPORT.items, "heritia");
+        } else if (id === "mamandouce") {
+          payload = ecosystemToItems(MAMANDOUCE_IMPORT.items, "mamandouce");
+        }
         onItemsExtracted(payload);
         setLoadingId(null);
         setSuccessId(id);
@@ -115,8 +103,15 @@ export function EcosystemBridge({
       setSuccessId(null);
 
       window.setTimeout(() => {
+        const bridge = getActiveBridges().find((b) => b.id === id);
         const url =
-          id === "heritia" ? buildHeritiaDeeplink(bundle) : buildMamanDouceDeeplink(bundle);
+          id === "heritia"
+            ? buildHeritiaDeeplink(bundle)
+            : id === "mamandouce"
+              ? buildMamanDouceDeeplink(bundle)
+              : bridge?.exportEndpoint
+                ? `${bridge.exportEndpoint}?ref=courseup`
+                : "https://app.neriacorp.io/";
         window.open(url, "_blank", "noopener,noreferrer");
         setLoadingId(null);
         setSuccessId(id);
@@ -126,17 +121,24 @@ export function EcosystemBridge({
     [bundle, loadingId],
   );
 
-  const exportCounts: Record<BridgeId, number> = {
+  const exportCounts: Record<string, number> = {
     heritia: itemsForHeritiaExport(bundle).length,
     mamandouce: itemsForMamanDouceExport(bundle).length,
   };
 
+  const visibleBridges = bridges.filter((bridge) => {
+    if (showExport) return supportsDirection(bridge, "export");
+    if (showImport) return supportsDirection(bridge, "import");
+    return true;
+  });
+
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {cards.map((card, index) => {
-        const Icon = card.icon;
+      {visibleBridges.map((card, index) => {
+        const Icon = bridgeIcon(card.id);
         const isLoading = loadingId === card.id;
         const isSuccess = successId === card.id;
+        const exportCount = exportCounts[card.id] ?? 0;
 
         return (
           <motion.article
@@ -147,15 +149,20 @@ export function EcosystemBridge({
             transition={{ delay: index * 0.08 }}
           >
             <div
-              className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${card.accent} border border-slate-200`}
+              className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${card.accentClass} border border-slate-200`}
             >
               <Icon className="h-5 w-5 text-blue-700" />
             </div>
             <div className="mb-1 flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wide text-blue-600">
-                {card.app}
+                {card.appName}
               </span>
               <Sparkles className="h-3 w-3 text-violet-500" />
+              {card.source === "cockpit" && (
+                <span className="rounded-full bg-cyan-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-800">
+                  Cockpit
+                </span>
+              )}
             </div>
             <h3 className="text-sm font-semibold text-slate-900">
               {showExport ? card.exportTitle : card.title}
@@ -166,15 +173,15 @@ export function EcosystemBridge({
             {!showExport && (
               <p className="mt-2 text-[11px] text-slate-600">{card.detail}</p>
             )}
-            {showExport && (
+            {showExport && exportCount > 0 && (
               <p className="mt-2 text-[11px] font-medium text-emerald-800">
-                {exportCounts[card.id]} produit{exportCounts[card.id] > 1 ? "s" : ""} prêt
-                {exportCounts[card.id] > 1 ? "s" : ""} à synchroniser
+                {exportCount} produit{exportCount > 1 ? "s" : ""} prêt
+                {exportCount > 1 ? "s" : ""} à synchroniser
               </p>
             )}
 
             <div className="mt-auto flex flex-col gap-2 pt-4">
-              {showImport && onItemsExtracted && (
+              {showImport && onItemsExtracted && supportsDirection(card, "import") && (
                 <motion.button
                   type="button"
                   disabled={!!loadingId}
@@ -202,10 +209,14 @@ export function EcosystemBridge({
                 </motion.button>
               )}
 
-              {showExport && (
+              {showExport && supportsDirection(card, "export") && (
                 <motion.button
                   type="button"
-                  disabled={!!loadingId || exportCounts[card.id] === 0}
+                  disabled={
+                    !!loadingId ||
+                    (exportCount === 0 &&
+                      (card.id === "heritia" || card.id === "mamandouce"))
+                  }
                   onClick={() => exportBridge(card.id)}
                   className="neria-cta-primary inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm disabled:opacity-50"
                   whileTap={{ scale: 0.98 }}
@@ -223,7 +234,7 @@ export function EcosystemBridge({
                   ) : (
                     <>
                       <Upload className="h-4 w-4" />
-                      Exporter vers {card.app}
+                      Exporter vers {card.appName}
                       <ExternalLink className="h-3.5 w-3.5 opacity-80" />
                     </>
                   )}

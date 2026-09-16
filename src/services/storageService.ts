@@ -4,6 +4,10 @@ import {
   DEFAULT_LOCATION_PREFS,
   type LocationPreferences,
 } from "@/types/store";
+import {
+  DEFAULT_NOTIFICATION_PREFS,
+  type NotificationPreferences,
+} from "@/types/notifications";
 
 const DB_NAME = "courseup-offline";
 const DB_VERSION = 1;
@@ -16,6 +20,7 @@ export const STORAGE_KEYS = {
   orders: "ordersHistory",
   n2oBalance: "n2oBalance",
   locationPrefs: "locationPrefs",
+  notificationPrefs: "notificationPrefs",
 } as const;
 
 export const DEFAULT_N2O_BALANCE = 1250;
@@ -115,14 +120,17 @@ export interface PersistedState {
   ordersHistory: DispatchOrder[];
   n2oBalance: number;
   locationPrefs: LocationPreferences;
+  notificationPrefs: NotificationPreferences;
 }
 
 export async function loadPersistedState(): Promise<PersistedState> {
-  const [cart, ordersHistory, n2oBalance, locationPrefs] = await Promise.all([
+  const [cart, ordersHistory, n2oBalance, locationPrefs, notificationPrefs] =
+    await Promise.all([
     read<IngestedItem[]>(STORAGE_KEYS.cart),
     read<DispatchOrder[]>(STORAGE_KEYS.orders),
     read<number>(STORAGE_KEYS.n2oBalance),
     read<LocationPreferences>(STORAGE_KEYS.locationPrefs),
+    read<NotificationPreferences>(STORAGE_KEYS.notificationPrefs),
   ]);
 
   return {
@@ -130,6 +138,7 @@ export async function loadPersistedState(): Promise<PersistedState> {
     ordersHistory: ordersHistory ?? [],
     n2oBalance: typeof n2oBalance === "number" ? n2oBalance : DEFAULT_N2O_BALANCE,
     locationPrefs: locationPrefs ?? DEFAULT_LOCATION_PREFS,
+    notificationPrefs: notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
   };
 }
 
@@ -147,6 +156,10 @@ export async function saveN2OBalance(balance: number): Promise<void> {
 
 export async function saveLocationPrefs(prefs: LocationPreferences): Promise<void> {
   await write(STORAGE_KEYS.locationPrefs, prefs);
+}
+
+export async function saveNotificationPrefs(prefs: NotificationPreferences): Promise<void> {
+  await write(STORAGE_KEYS.notificationPrefs, prefs);
 }
 
 export async function appendOrder(order: DispatchOrder): Promise<void> {

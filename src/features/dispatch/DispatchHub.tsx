@@ -18,6 +18,7 @@ import {
   createDispatchOrder,
   stepsFromOrder,
 } from "./buildDispatchOrder";
+import { notifyDrivePickupReminder } from "@/services/notificationService";
 import { DriveExportCard } from "./DriveExportCard";
 import { SelysVoucherCard } from "./SelysVoucherCard";
 import type { OptimizedBasket } from "@/types/optimizer";
@@ -29,7 +30,7 @@ interface DispatchHubProps {
 }
 
 export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
-  const { addN2OBalance, saveOrder, items } = useCourseUp();
+  const { addN2OBalance, saveOrder, items, notificationPrefs } = useCourseUp();
   const [order, setOrder] = useState<DispatchOrder>(() => createDispatchOrder(basket));
   const [exportOpen, setExportOpen] = useState(false);
   const [exportSession, setExportSession] = useState(0);
@@ -41,6 +42,14 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
   );
 
   const steps = useMemo(() => stepsFromOrder(order), [order]);
+
+  useEffect(() => {
+    if (!notificationPrefs.driveReminders) return;
+    const key = `courseup:drive-notif:${order.id}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    void notifyDrivePickupReminder(order);
+  }, [notificationPrefs.driveReminders, order]);
 
   const updateDriveStatus = useCallback((id: string, status: DispatchStatus) => {
     setOrder((prev) => {
