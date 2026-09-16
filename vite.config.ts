@@ -14,7 +14,7 @@ export default defineConfig({
         name: "CourseUp",
         short_name: "CourseUp",
         description: "Ingestion intelligente — NeriaCorp",
-        theme_color: "#0A192F",
+        theme_color: "#0041E6",
         background_color: "#0A192F",
         display: "standalone",
         icons: [

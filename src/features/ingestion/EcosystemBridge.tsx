@@ -30,7 +30,7 @@ const cards: {
     subtitle: "Importer le menu de la semaine",
     detail: "12 ingrédients extraits de 5 recettes",
     icon: CalendarHeart,
-    accent: "from-rose-500/20 to-orange-500/10",
+    accent: "from-rose-100 to-orange-50",
   },
   {
     id: "mamandouce",
@@ -39,7 +39,7 @@ const cards: {
     subtitle: "Importer la liste de courses partagée",
     detail: "8 produits de la maison",
     icon: Home,
-    accent: "from-violet-500/20 to-fuchsia-500/10",
+    accent: "from-violet-100 to-cyan-50",
   },
 ];
 
@@ -77,25 +77,25 @@ export function EcosystemBridge({ onItemsExtracted }: EcosystemBridgeProps) {
         return (
           <motion.article
             key={card.id}
-            className="flex flex-col rounded-2xl border border-border bg-card/60 p-4 backdrop-blur-md"
+            className="neria-card flex flex-col p-4"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.08 }}
           >
             <div
-              className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${card.accent} border border-border`}
+              className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${card.accent} border border-slate-200`}
             >
-              <Icon className="h-5 w-5 text-slate-200" />
+              <Icon className="h-5 w-5 text-blue-700" />
             </div>
             <div className="mb-1 flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wide text-emerald-accent/90">
+              <span className="text-xs font-bold uppercase tracking-wide text-blue-600">
                 {card.app}
               </span>
-              <Sparkles className="h-3 w-3 text-slate-500" />
+              <Sparkles className="h-3 w-3 text-violet-500" />
             </div>
-            <h3 className="text-sm font-semibold text-white">{card.title}</h3>
-            <p className="mt-1 text-xs text-slate-400">{card.subtitle}</p>
-            <p className="mt-2 text-[11px] text-slate-500">{card.detail}</p>
+            <h3 className="text-sm font-semibold text-slate-900">{card.title}</h3>
+            <p className="mt-1 text-xs text-slate-600">{card.subtitle}</p>
+            <p className="mt-2 text-[11px] text-slate-600">{card.detail}</p>
 
             <motion.button
               type="button"
@@ -103,8 +103,8 @@ export function EcosystemBridge({ onItemsExtracted }: EcosystemBridgeProps) {
               onClick={() => importBridge(card.id)}
               className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
                 isSuccess
-                  ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-300"
-                  : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50"
+                  ? "border-blue-500 bg-blue-50 text-blue-800"
+                  : "border-slate-300 bg-white text-slate-800 hover:border-blue-400 hover:bg-blue-50/50 disabled:opacity-50"
               }`}
               whileTap={{ scale: 0.98 }}
             >

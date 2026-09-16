@@ -57,16 +57,16 @@ export function TicketScanZone({ onItemsExtracted }: TicketScanZoneProps) {
   return (
     <div className="space-y-3">
       <motion.div
-        className="rounded-2xl border border-border bg-card/50 p-5 backdrop-blur-md"
+        className="neria-card p-5"
         whileTap={{ scale: phase === "scanning" ? 1 : 0.995 }}
       >
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10">
-            <Camera className="h-7 w-7 text-emerald-accent" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50">
+            <Camera className="h-7 w-7 text-blue-600" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Photo / Scanner ticket</p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="text-sm font-semibold text-slate-900">Photo / Scanner ticket</p>
+            <p className="mt-1 text-xs text-slate-600">
               OCR client-side (Tesseract) · pré-traitement contraste smartphone
             </p>
           </div>
@@ -84,7 +84,7 @@ export function TicketScanZone({ onItemsExtracted }: TicketScanZoneProps) {
             type="button"
             disabled={phase === "scanning"}
             onClick={() => cameraRef.current?.click()}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-accent px-4 py-3 text-sm font-bold text-navy disabled:opacity-50"
+            className="neria-cta-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm disabled:opacity-50"
           >
             <ScanLine className="h-4 w-4" />
             Ouvrir la caméra / galerie
@@ -99,20 +99,20 @@ export function TicketScanZone({ onItemsExtracted }: TicketScanZoneProps) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <div className="relative h-24 overflow-hidden rounded-lg border border-border bg-navy/80">
+                <div className="relative h-24 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                   <motion.div
-                    className="absolute left-0 right-0 h-0.5 bg-emerald-accent shadow-[0_0_12px_rgba(16,185,129,0.8)]"
+                    className="absolute left-0 right-0 h-0.5 bg-blue-600 shadow-[0_0_12px_rgba(0,65,230,0.5)]"
                     animate={{ top: ["5%", "95%", "5%"] }}
                     transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
                   />
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-navy/60">
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                   <motion.div
-                    className="h-full bg-emerald-accent"
+                    className="h-full bg-blue-600"
                     animate={{ width: `${progress}%` }}
                   />
                 </div>
-                <p className="text-xs text-emerald-300">
+                <p className="text-xs text-blue-700">
                   {status || "Numérisation…"} {progress}%
                 </p>
               </motion.div>
@@ -120,11 +120,11 @@ export function TicketScanZone({ onItemsExtracted }: TicketScanZoneProps) {
           </AnimatePresence>
 
           {phase === "done" && (
-            <p className="text-xs font-medium text-emerald-400">
+            <p className="text-xs font-medium text-blue-700">
               {lastCount} article{lastCount > 1 ? "s" : ""} injectés (confiance OCR)
             </p>
           )}
-          {error && <p className="text-xs text-amber-300">{error}</p>}
+          {error && <p className="text-xs text-amber-700">{error}</p>}
         </div>
       </motion.div>
     </div>

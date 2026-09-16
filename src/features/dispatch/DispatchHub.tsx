@@ -83,47 +83,47 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 transition hover:text-emerald-300"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-200 transition hover:text-cyan-200"
       >
         <ArrowLeft className="h-4 w-4" />
         Retour à l&apos;optimiseur
       </button>
 
-      <div className="rounded-2xl border border-border bg-card/50 p-4 backdrop-blur-md">
+      <div className="neria-card p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15">
-            <Truck className="h-5 w-5 text-emerald-accent" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
+            <Truck className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-accent/90">
+            <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
               Hub de dispatch · {order.id}
             </p>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-600">
               Export vers drives affiliés & bons Selys
             </p>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl border border-border bg-navy/40 px-2 py-3">
-            <p className="text-[10px] uppercase text-slate-500">Total dépensé</p>
-            <p className="text-base font-bold text-white">{order.totalSpent.toFixed(2)} €</p>
+          <div className="rounded-xl border border-slate-200 bg-white px-2 py-3">
+            <p className="text-[10px] uppercase text-slate-600">Total dépensé</p>
+            <p className="text-base font-bold text-slate-900">{order.totalSpent.toFixed(2)} €</p>
           </div>
-          <div className="rounded-xl border border-border bg-navy/40 px-2 py-3">
-            <p className="text-[10px] uppercase text-slate-500">Économies</p>
-            <p className="text-base font-bold text-emerald-300">
+          <div className="rounded-xl border border-slate-200 bg-white px-2 py-3">
+            <p className="text-[10px] uppercase text-slate-600">Économies</p>
+            <p className="text-base font-bold text-blue-700">
               {order.totalSavings.toFixed(2)} €
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-navy/40 px-2 py-3">
-            <p className="text-[10px] uppercase text-slate-500">N2O crédité</p>
-            <p className="text-base font-bold text-emerald-300">+{order.totalN2OCredited}</p>
+          <div className="rounded-xl border border-slate-200 bg-white px-2 py-3">
+            <p className="text-[10px] uppercase text-slate-600">N2O crédité</p>
+            <p className="text-base font-bold text-violet-700">+{order.totalN2OCredited}</p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card/40 p-4 backdrop-blur-md">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <div className="neria-card p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
           Progression validation
         </p>
         <ol className="space-y-2">
@@ -145,22 +145,22 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
                 key={step.id}
                 className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${
                   done
-                    ? "border-emerald-500/30 bg-emerald-500/10"
+                    ? "border-blue-300 bg-blue-50"
                     : active
-                      ? "border-border bg-navy/50"
-                      : "border-border/60 bg-navy/20 opacity-70"
+                      ? "border-slate-300 bg-white"
+                      : "border-slate-200 bg-slate-50 opacity-70"
                 }`}
               >
                 <Icon
                   className={`h-4 w-4 shrink-0 ${
                     done
-                      ? "text-emerald-accent"
+                      ? "text-blue-600"
                       : step.status === "checkout_started"
-                        ? "animate-spin text-amber-400"
+                        ? "animate-spin text-amber-500"
                         : "text-slate-500"
                   }`}
                 />
-                <span className="text-sm text-slate-200">{step.label}</span>
+                <span className="text-sm text-slate-800">{step.label}</span>
               </li>
             );
           })}
@@ -168,7 +168,7 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-white">Export drives affiliés</h3>
+        <h3 className="text-sm font-semibold text-slate-100">Export drives affiliés</h3>
         {order.driveCheckouts.map((checkout, index) => (
           <DriveExportCard
             key={checkout.id}
@@ -178,7 +178,7 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
           />
         ))}
         {order.driveCheckouts.length === 0 && (
-          <p className="text-xs text-slate-500">Aucun drive — panier 100 % Selys.</p>
+          <p className="text-xs text-slate-300">Aucun drive — panier 100 % Selys.</p>
         )}
       </div>
 
@@ -188,7 +188,7 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
 
       {allDone && (
         <motion.p
-          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm font-medium text-emerald-300"
+          className="neria-card border border-blue-200 px-4 py-3 text-center text-sm font-medium text-blue-800"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
@@ -200,7 +200,7 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
       <motion.button
         type="button"
         onClick={onNewOrder}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-navy/40 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-400"
         whileTap={{ scale: 0.98 }}
       >
         <RotateCcw className="h-4 w-4" />

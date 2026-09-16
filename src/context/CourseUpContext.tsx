@@ -298,7 +298,12 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
 
   if (!isHydrated) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-navy text-sm text-slate-400">
+      <div
+        className="flex min-h-dvh items-center justify-center text-sm font-medium text-white"
+        style={{
+          background: "linear-gradient(135deg, #0041e6 0%, #0b1120 100%)",
+        }}
+      >
         Chargement des données locales…
       </div>
     );
