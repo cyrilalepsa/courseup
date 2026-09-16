@@ -1,3 +1,5 @@
+import type { DriveStore } from "@/types/store";
+
 export type OptimizationMode = "monopoly" | "multi-drive" | "hybrid-selys";
 
 export type PartnerStoreId =
@@ -30,7 +32,7 @@ export interface StoreSplit {
   items: AssignedLineItem[];
   subtotal: number;
   affiliationCashback: number;
-import type { DriveStore } from "@/types/store";
+  physicalStore?: DriveStore;
   displayName?: string;
   tripDistanceKm?: number;
 }
