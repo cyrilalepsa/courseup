@@ -144,4 +144,81 @@ body {
       rgba(148, 163, 184, 0.35) 12px
     );
   }
+
+  .neria-checkout-pass-shell {
+    @apply fixed inset-0 z-[60] flex flex-col bg-white text-slate-950;
+    filter: brightness(1.08) contrast(1.12);
+  }
+
+  .neria-checkout-pass-header {
+    @apply flex items-start justify-between gap-3 border-b border-slate-300 px-4 py-4;
+  }
+
+  .neria-checkout-pass-kicker {
+    @apply text-[10px] font-bold uppercase tracking-wider text-blue-700;
+  }
+
+  .neria-checkout-pass-title {
+    @apply text-xl font-bold text-slate-950;
+  }
+
+  .neria-checkout-pass-close {
+    @apply rounded-xl border border-slate-300 p-2 text-slate-800 hover:bg-slate-100;
+  }
+
+  .neria-checkout-pass-wake-hint {
+    @apply border-b border-slate-200 bg-slate-100 px-4 py-2 text-center text-[11px] font-medium text-slate-700;
+  }
+
+  .neria-checkout-pass-body {
+    @apply flex flex-1 flex-col items-center justify-center gap-4 px-4 py-6;
+  }
+
+  .neria-checkout-pass-card {
+    @apply w-full max-w-md touch-pan-y p-6;
+  }
+
+  .neria-checkout-pass-qr-wrap {
+    @apply rounded-2xl border-2 border-slate-900 bg-white p-4 shadow-md;
+  }
+
+  .neria-checkout-pass-carousel-nav {
+    @apply flex w-full max-w-md items-center justify-between gap-3;
+  }
+
+  .neria-checkout-pass-nav-btn {
+    @apply rounded-full border border-slate-400 p-2 text-slate-900 hover:bg-slate-100;
+  }
+
+  .neria-checkout-pass-dot {
+    @apply h-2 w-2 rounded-full bg-slate-300;
+  }
+
+  .neria-checkout-pass-dot-active {
+    @apply w-6 bg-blue-700;
+  }
+
+  .neria-checkout-pass-footer {
+    @apply border-t border-slate-300 px-4 py-3 text-center;
+  }
+
+  .neria-cta-checkout {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/50 bg-amber-100 px-3 py-2 text-[11px] font-bold text-amber-950 transition hover:bg-amber-200;
+  }
+
+  .neria-badge-gamification-eco {
+    @apply border-emerald-600/40 bg-emerald-100 text-emerald-900;
+  }
+
+  .neria-badge-gamification-discount {
+    @apply border-orange-500/40 bg-orange-100 text-orange-900;
+  }
+
+  .neria-badge-gamification-selys {
+    @apply border-cyan-600/40 bg-cyan-100 text-cyan-900;
+  }
+
+  .neria-badge-gamification-heritia {
+    @apply border-rose-500/40 bg-rose-100 text-rose-900;
+  }
 }

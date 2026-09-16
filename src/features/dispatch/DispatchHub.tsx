@@ -21,6 +21,7 @@ import {
 import { notifyDrivePickupReminder } from "@/services/notificationService";
 import { DriveExportCard } from "./DriveExportCard";
 import { SelysVoucherCard } from "./SelysVoucherCard";
+import { openSelysMarketplace } from "@/services/selysDispatchService";
 import type { OptimizedBasket } from "@/types/optimizer";
 
 interface DispatchHubProps {
@@ -30,7 +31,7 @@ interface DispatchHubProps {
 }
 
 export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
-  const { addN2OBalance, saveOrder, items, notificationPrefs } = useCourseUp();
+  const { creditDispatchCompletion, saveOrder, items, notificationPrefs } = useCourseUp();
   const [order, setOrder] = useState<DispatchOrder>(() => createDispatchOrder(basket));
   const [exportOpen, setExportOpen] = useState(false);
   const [exportSession, setExportSession] = useState(0);
@@ -89,8 +90,8 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
     sessionStorage.setItem(creditKey, "1");
     const finalized: DispatchOrder = { ...order, globalStatus: "completed" };
     void saveOrder(finalized);
-    addN2OBalance(order.totalN2OCredited);
-  }, [addN2OBalance, allDone, order, saveOrder]);
+    creditDispatchCompletion(finalized, basket, exportBundle);
+  }, [creditDispatchCompletion, allDone, order, saveOrder, basket, exportBundle]);
 
   return (
     <motion.div
@@ -213,7 +214,11 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
       </div>
 
       {order.selysVoucher && (
-        <SelysVoucherCard voucher={order.selysVoucher} onStatusChange={updateSelysStatus} />
+        <SelysVoucherCard
+          voucher={order.selysVoucher}
+          onStatusChange={updateSelysStatus}
+          onOpenMarketplace={() => openSelysMarketplace(basket, order)}
+        />
       )}
 
       {allDone && (

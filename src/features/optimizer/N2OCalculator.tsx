@@ -1,13 +1,17 @@
 import { motion } from "framer-motion";
 import { Coins, Sparkles } from "lucide-react";
 import type { N2OGain } from "@/types/optimizer";
+import { computeTokensFromSavingsEuro, getCashbackConfig } from "@/services/cashbackService";
 
 interface N2OCalculatorProps {
   gain: N2OGain;
+  savingsAmountEuro?: number;
 }
 
-export function N2OCalculator({ gain }: N2OCalculatorProps) {
+export function N2OCalculator({ gain, savingsAmountEuro = 0 }: N2OCalculatorProps) {
   const percent = Math.round(gain.conversionProgress * 100);
+  const config = getCashbackConfig();
+  const checkoutTokens = computeTokensFromSavingsEuro(savingsAmountEuro, config);
 
   return (
     <motion.section
@@ -28,6 +32,10 @@ export function N2OCalculator({ gain }: N2OCalculatorProps) {
             <span className="font-semibold text-blue-700">{gain.cashbackEuro.toFixed(2)} €</span>
           </p>
           <p className="mt-0.5 text-[11px] text-slate-600">{gain.bonusLabel}</p>
+          <p className="mt-1 text-[11px] font-medium text-violet-800">
+            Crédit caisse configurable : +{checkoutTokens} N2O (
+            {config.eurosPerN2OToken} € d&apos;économie réelle / jeton)
+          </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right">
           <p className="text-[10px] uppercase text-slate-600">Palier</p>

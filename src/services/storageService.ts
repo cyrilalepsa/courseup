@@ -11,7 +11,7 @@ import {
 } from "@/types/notifications";
 
 const DB_NAME = "courseup-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = "kv";
 
 const LS_PREFIX = "courseup:";
@@ -24,6 +24,10 @@ export const STORAGE_KEYS = {
   notificationPrefs: "notificationPrefs",
   aisleLayouts: "aisleLayouts",
   instoreSession: "instoreSession",
+  cashbackLedger: "cashbackLedger",
+  gamificationBadges: "gamificationBadges",
+  loyaltyWallet: "loyaltyWallet",
+  syncQueue: "syncQueue",
 } as const;
 
 export const DEFAULT_N2O_BALANCE = 1250;
@@ -99,7 +103,7 @@ async function idbSet<T>(key: StorageKey, value: T): Promise<void> {
   });
 }
 
-async function read<T>(key: StorageKey): Promise<T | null> {
+export async function storageRead<T>(key: StorageKey): Promise<T | null> {
   try {
     const fromIdb = await idbGet<T>(key);
     if (fromIdb != null) return fromIdb;
@@ -109,7 +113,7 @@ async function read<T>(key: StorageKey): Promise<T | null> {
   return lsGet<T>(key);
 }
 
-async function write<T>(key: StorageKey, value: T): Promise<void> {
+export async function storageWrite<T>(key: StorageKey, value: T): Promise<void> {
   lsSet(key, value);
   try {
     await idbSet(key, value);
@@ -129,11 +133,11 @@ export interface PersistedState {
 export async function loadPersistedState(): Promise<PersistedState> {
   const [cart, ordersHistory, n2oBalance, locationPrefs, notificationPrefs] =
     await Promise.all([
-    read<IngestedItem[]>(STORAGE_KEYS.cart),
-    read<DispatchOrder[]>(STORAGE_KEYS.orders),
-    read<number>(STORAGE_KEYS.n2oBalance),
-    read<LocationPreferences>(STORAGE_KEYS.locationPrefs),
-    read<NotificationPreferences>(STORAGE_KEYS.notificationPrefs),
+    storageRead<IngestedItem[]>(STORAGE_KEYS.cart),
+    storageRead<DispatchOrder[]>(STORAGE_KEYS.orders),
+    storageRead<number>(STORAGE_KEYS.n2oBalance),
+    storageRead<LocationPreferences>(STORAGE_KEYS.locationPrefs),
+    storageRead<NotificationPreferences>(STORAGE_KEYS.notificationPrefs),
   ]);
 
   return {
@@ -146,27 +150,27 @@ export async function loadPersistedState(): Promise<PersistedState> {
 }
 
 export async function saveCart(items: IngestedItem[]): Promise<void> {
-  await write(STORAGE_KEYS.cart, items);
+  await storageWrite(STORAGE_KEYS.cart, items);
 }
 
 export async function saveOrdersHistory(orders: DispatchOrder[]): Promise<void> {
-  await write(STORAGE_KEYS.orders, orders);
+  await storageWrite(STORAGE_KEYS.orders, orders);
 }
 
 export async function saveN2OBalance(balance: number): Promise<void> {
-  await write(STORAGE_KEYS.n2oBalance, balance);
+  await storageWrite(STORAGE_KEYS.n2oBalance, balance);
 }
 
 export async function saveLocationPrefs(prefs: LocationPreferences): Promise<void> {
-  await write(STORAGE_KEYS.locationPrefs, prefs);
+  await storageWrite(STORAGE_KEYS.locationPrefs, prefs);
 }
 
 export async function saveNotificationPrefs(prefs: NotificationPreferences): Promise<void> {
-  await write(STORAGE_KEYS.notificationPrefs, prefs);
+  await storageWrite(STORAGE_KEYS.notificationPrefs, prefs);
 }
 
 export async function appendOrder(order: DispatchOrder): Promise<void> {
-  const current = (await read<DispatchOrder[]>(STORAGE_KEYS.orders)) ?? [];
+  const current = (await storageRead<DispatchOrder[]>(STORAGE_KEYS.orders)) ?? [];
   if (current.some((o) => o.id === order.id)) return;
   await saveOrdersHistory([order, ...current].slice(0, 50));
 }
@@ -181,20 +185,20 @@ export interface InStoreSessionState {
 }
 
 export async function loadAisleOrder(storeId: string): Promise<MacroAisleId[] | null> {
-  const map = await read<AisleLayoutMap>(STORAGE_KEYS.aisleLayouts);
+  const map = await storageRead<AisleLayoutMap>(STORAGE_KEYS.aisleLayouts);
   return map?.[storeId] ?? null;
 }
 
 export async function saveAisleOrder(storeId: string, order: MacroAisleId[]): Promise<void> {
-  const map = (await read<AisleLayoutMap>(STORAGE_KEYS.aisleLayouts)) ?? {};
+  const map = (await storageRead<AisleLayoutMap>(STORAGE_KEYS.aisleLayouts)) ?? {};
   map[storeId] = order;
-  await write(STORAGE_KEYS.aisleLayouts, map);
+  await storageWrite(STORAGE_KEYS.aisleLayouts, map);
 }
 
 export async function loadInStoreSession(): Promise<InStoreSessionState | null> {
-  return read<InStoreSessionState>(STORAGE_KEYS.instoreSession);
+  return storageRead<InStoreSessionState>(STORAGE_KEYS.instoreSession);
 }
 
 export async function saveInStoreSession(session: InStoreSessionState): Promise<void> {
-  await write(STORAGE_KEYS.instoreSession, session);
+  await storageWrite(STORAGE_KEYS.instoreSession, session);
 }

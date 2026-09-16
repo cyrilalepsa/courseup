@@ -155,7 +155,7 @@ export function OptimizerHub({
         onDiscountAppliedChange={setDiscountAppliedItemIds}
       />
 
-      <N2OCalculator gain={basket.n2o} />
+      <N2OCalculator gain={basket.n2o} savingsAmountEuro={basket.savings.savingsAmount} />
 
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-100">Répartition par enseigne</h3>

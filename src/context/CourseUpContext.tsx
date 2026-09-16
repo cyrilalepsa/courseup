@@ -59,12 +59,39 @@ import {
 } from "@/types/store";
 import { createIngestedItem } from "@/features/ingestion/mockIngestion";
 import { ensureItemAttributesList } from "@/services/itemAttributeService";
+import {
+  computeCashbackCreditFromSavings,
+  emitHeritiaFreshExport,
+} from "@/services/cashbackService";
+import {
+  evaluateBadgeUnlocks,
+  mergeBadgeRecords,
+} from "@/services/badgeService";
+import { isolateSelysProducts } from "@/services/selysDispatchService";
+import {
+  bindOnlineSyncFlush,
+  enqueueSyncJob,
+  flushSyncQueue,
+  loadGamificationState,
+  saveCashbackLedger,
+  saveGamificationBadges,
+} from "@/services/syncManager";
+import { DEFAULT_CHECKOUT_WALLET } from "@/config/checkoutWallet";
+import { SELYS_MERCHANT_REWARDS } from "@/config/merchantRewards";
+import type { CashbackLedgerEntry } from "@/types/cashback";
+import type { CheckoutWalletState } from "@/types/checkout";
+import type { ExportBundle } from "@/types/export";
+import type { GamificationBadgeRecord } from "@/types/gamification";
+import type { OptimizedBasket } from "@/types/optimizer";
 
 interface CourseUpContextValue {
   isHydrated: boolean;
   items: IngestedItem[];
   n2oBalance: number;
   ordersHistory: DispatchOrder[];
+  cashbackLedger: CashbackLedgerEntry[];
+  gamificationBadges: GamificationBadgeRecord[];
+  checkoutWallet: CheckoutWalletState;
   locationPrefs: LocationPreferences;
   nearbyStores: DriveStore[];
   selectedStores: Partial<Record<StoreBrand, DriveStore>>;
@@ -78,6 +105,12 @@ interface CourseUpContextValue {
   removeItem: (id: string) => void;
   clearCart: () => void;
   addN2OBalance: (amount: number) => void;
+  creditDispatchCompletion: (
+    order: DispatchOrder,
+    basket: OptimizedBasket,
+    bundle: ExportBundle,
+  ) => void;
+  redeemMerchantReward: (rewardId: string) => boolean;
   saveOrder: (order: DispatchOrder) => Promise<void>;
   setSearchRadius: (radius: SearchRadiusKm) => void;
   setManualLocation: (postalCode: string, city: string) => void;
@@ -113,6 +146,13 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   const [items, setItemsState] = useState<IngestedItem[]>([]);
   const [n2oBalance, setN2oBalance] = useState(DEFAULT_N2O_BALANCE);
   const [ordersHistory, setOrdersHistory] = useState<DispatchOrder[]>([]);
+  const [cashbackLedger, setCashbackLedger] = useState<CashbackLedgerEntry[]>([]);
+  const [gamificationBadges, setGamificationBadges] = useState<GamificationBadgeRecord[]>(
+    [],
+  );
+  const [checkoutWallet, setCheckoutWallet] = useState<CheckoutWalletState>(
+    DEFAULT_CHECKOUT_WALLET,
+  );
   const [locationPrefs, setLocationPrefs] = useState<LocationPreferences>(
     DEFAULT_LOCATION_PREFS,
   );
@@ -160,6 +200,19 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(COCKPIT_BRIDGE_EVENT, onCockpitConfig);
   }, []);
 
+  useEffect(() => {
+    if (!isHydrated) return undefined;
+    return bindOnlineSyncFlush(() => {
+      void flushSyncQueue(async (job) => {
+        if (job.kind === "heritia_fresh_export") {
+          if (typeof navigator !== "undefined" && !navigator.onLine) return false;
+          return true;
+        }
+        return true;
+      });
+    });
+  }, [isHydrated]);
+
   const persistLocation = useCallback((prefs: LocationPreferences) => {
     const computed = withNearbyStores(prefs);
     setLocationPrefs(computed.prefs);
@@ -175,6 +228,12 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       setItemsState(ensureItemAttributesList(state.cart));
       setN2oBalance(state.n2oBalance);
       setOrdersHistory(state.ordersHistory);
+      void loadGamificationState().then((gamification) => {
+        if (cancelled) return;
+        setCashbackLedger(gamification.cashbackLedger);
+        setGamificationBadges(gamification.badges);
+        setCheckoutWallet(gamification.wallet);
+      });
       const computed = withNearbyStores(state.locationPrefs);
       setLocationPrefs(computed.prefs);
       setNearbyStores(computed.nearby);
@@ -359,6 +418,65 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     await appendOrder(order);
   }, []);
 
+  const creditDispatchCompletion = useCallback(
+    (order: DispatchOrder, basket: OptimizedBasket, bundle: ExportBundle) => {
+      const credit = computeCashbackCreditFromSavings(order.totalSavings, {
+        orderId: order.id,
+        source: "dispatch",
+        label: "Dispatch validé",
+      });
+      if (credit.tokensGranted > 0) {
+        setCashbackLedger((prev) => {
+          const next = [credit.ledgerEntry, ...prev].slice(0, 100);
+          void saveCashbackLedger(next);
+          return next;
+        });
+        addN2OBalance(credit.tokensGranted);
+      }
+
+      emitHeritiaFreshExport(bundle);
+      void enqueueSyncJob("heritia_fresh_export", {
+        orderId: order.id,
+        deeplink: bundle.createdAt,
+        items: bundle.items.filter((i) => i.category === "frais").length,
+      });
+
+      const hasDiscountStop = basket.splits.some(
+        (s) => s.store.id === "lidl" || s.store.id === "aldi",
+      );
+      const selysItemCount = isolateSelysProducts(basket).length;
+      const freshItemCount = bundle.items.filter((i) => i.category === "frais").length;
+      const badgeIds = evaluateBadgeUnlocks({
+        totalSavingsEuro: order.totalSavings,
+        hasDiscountStop,
+        selysItemCount,
+        freshItemCount,
+        heritiaExportQueued: true,
+      });
+      setGamificationBadges((prev) => {
+        const next = mergeBadgeRecords(prev, badgeIds);
+        void saveGamificationBadges(next);
+        void enqueueSyncJob("badge_snapshot", { badges: next });
+        return next;
+      });
+    },
+    [addN2OBalance],
+  );
+
+  const redeemMerchantReward = useCallback((rewardId: string): boolean => {
+    const reward = SELYS_MERCHANT_REWARDS.find((r) => r.id === rewardId);
+    if (!reward) return false;
+    let ok = false;
+    setN2oBalance((prev) => {
+      if (prev < reward.n2oCost) return prev;
+      ok = true;
+      const next = prev - reward.n2oCost;
+      void saveN2OBalance(next);
+      return next;
+    });
+    return ok;
+  }, []);
+
   const setSearchRadius = useCallback(
     (radius: SearchRadiusKm) => {
       persistLocation({ ...locationPrefs, searchRadiusKm: radius });
@@ -416,6 +534,9 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       items,
       n2oBalance,
       ordersHistory,
+      cashbackLedger,
+      gamificationBadges,
+      checkoutWallet,
       locationPrefs,
       nearbyStores,
       selectedStores,
@@ -436,6 +557,8 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       removeItem,
       clearCart,
       addN2OBalance,
+      creditDispatchCompletion,
+      redeemMerchantReward,
       saveOrder,
       setSearchRadius,
       setManualLocation,
@@ -447,6 +570,9 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       items,
       n2oBalance,
       ordersHistory,
+      cashbackLedger,
+      gamificationBadges,
+      checkoutWallet,
       locationPrefs,
       nearbyStores,
       selectedStores,
@@ -465,6 +591,8 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       removeItem,
       clearCart,
       addN2OBalance,
+      creditDispatchCompletion,
+      redeemMerchantReward,
       saveOrder,
       setSearchRadius,
       setManualLocation,
