@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy: #0a192f;
-  --color-card: #1e293b;
-  --color-border: #334155;
-  --color-emerald-accent: #10b981;
+  --color-neria-blue: #0041e6;
+  --color-neria-night: #0b1120;
+  --color-neria-cyan: #22d3ee;
+  --color-neria-violet: #a855f7;
 }
 
 html,
@@ -15,8 +15,9 @@ body,
 
 body {
   margin: 0;
-  background-color: var(--color-navy);
-  color: #f1f5f9;
+  background: linear-gradient(135deg, #0041e6 0%, #0b1120 100%);
+  background-attachment: fixed;
+  color: #f8fafc;
   font-family:
     "Inter",
     system-ui,
@@ -28,5 +29,43 @@ body {
 }
 
 ::selection {
-  background-color: color-mix(in srgb, var(--color-emerald-accent) 35%, transparent);
+  background-color: color-mix(in srgb, #22d3ee 35%, transparent);
+}
+
+@layer components {
+  .neria-app-shell {
+    @apply flex min-h-dvh flex-col text-slate-100;
+  }
+
+  .neria-card {
+    @apply rounded-2xl shadow-lg shadow-black/20 bg-[linear-gradient(135deg,#FFFFFF_0%,#E2E8F0_100%)] text-slate-900;
+  }
+
+  .neria-card-muted {
+    @apply rounded-2xl border border-white/10 bg-white/10 text-slate-100 backdrop-blur-md;
+  }
+
+  .neria-input {
+    @apply rounded-xl border border-slate-300 bg-white text-slate-900 outline-none focus:border-blue-600;
+  }
+
+  .neria-badge-n2o {
+    @apply inline-flex items-center gap-1 rounded-full border border-cyan-400/40 bg-[linear-gradient(135deg,rgba(34,211,238,0.2)_0%,rgba(168,85,247,0.25)_100%)] px-2.5 py-1 text-[10px] font-semibold text-slate-900 shadow-sm;
+  }
+
+  .neria-cta-primary {
+    @apply rounded-xl bg-blue-600 font-bold text-white shadow-lg shadow-black/20 transition hover:bg-blue-700;
+  }
+
+  .neria-cta-n2o {
+    @apply rounded-xl bg-[linear-gradient(135deg,#22D3EE_0%,#A855F7_100%)] font-bold text-slate-900 shadow-lg shadow-violet-500/30 transition hover:brightness-110;
+  }
+
+  .neria-tab-active {
+    @apply rounded-lg bg-white text-slate-900 shadow-md;
+  }
+
+  .neria-tab-idle {
+    @apply rounded-lg text-slate-200 hover:bg-white/10;
+  }
 }

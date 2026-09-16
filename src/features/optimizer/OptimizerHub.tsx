@@ -48,7 +48,7 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 transition hover:text-emerald-300"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-200 transition hover:text-cyan-200"
       >
         <ArrowLeft className="h-4 w-4" />
         Retour à l&apos;ingestion
@@ -56,21 +56,21 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
 
       <StoreSelector variant="inline" />
 
-      <div className="rounded-2xl border border-border bg-card/50 p-4 backdrop-blur-md">
+      <div className="neria-card p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15">
-            <ShoppingCart className="h-5 w-5 text-emerald-accent" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
+            <ShoppingCart className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-accent/90">
+            <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
               Récapitulatif panier
             </p>
-            <p className="text-sm font-semibold text-white">
+            <p className="text-sm font-semibold text-slate-900">
               {items.length} références validées · {totalLines} lignes dispatchées
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-600">
               Mode actif :{" "}
-              <span className="text-slate-300">
+              <span className="text-slate-800">
                 {mode === "monopoly"
                   ? "Plein Monopole"
                   : mode === "multi-drive"
@@ -79,7 +79,7 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
               </span>
             </p>
             {basket.savings.totalTripDistanceKm > 0 && (
-              <p className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-300/90">
+              <p className="mt-1 inline-flex items-center gap-1 text-xs text-blue-700">
                 <Navigation className="h-3.5 w-3.5" />
                 Distance totale estimée : {basket.savings.totalTripDistanceKm} km (aller-retour)
               </p>
@@ -99,23 +99,23 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
       <N2OCalculator gain={basket.n2o} />
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-white">Répartition par enseigne</h3>
+        <h3 className="text-sm font-semibold text-slate-100">Répartition par enseigne</h3>
         {basket.splits.map((split, index) => (
           <motion.article
             key={split.store.id}
-            className="overflow-hidden rounded-2xl border border-border bg-card/60 backdrop-blur-md"
+            className="neria-card overflow-hidden"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
           >
             <div
-              className={`flex flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-r ${split.store.accentClass} px-4 py-3`}
+              className={`flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-gradient-to-r ${split.store.accentClass} px-4 py-3`}
             >
               <div>
                 <p className="text-sm font-bold text-white">
                   {split.displayName ?? split.store.name}
                 </p>
-                <p className="flex items-center gap-1 text-[11px] text-slate-400">
+                <p className="flex items-center gap-1 text-[11px] text-white/80">
                   <MapPin className="h-3 w-3" />
                   {split.physicalStore
                     ? `${split.physicalStore.address}, ${split.physicalStore.postalCode}`
@@ -127,24 +127,24 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
               </div>
               <div className="text-right">
                 <p className="text-lg font-bold text-white">{split.subtotal.toFixed(2)} €</p>
-                <p className="text-[10px] text-emerald-300/90">
+                <p className="text-[10px] text-cyan-100">
                   +{split.affiliationCashback.toFixed(2)} € cashback
                 </p>
               </div>
             </div>
-            <ul className="divide-y divide-border/60 px-4 py-2">
+            <ul className="divide-y divide-slate-200 px-4 py-2">
               {split.items.map((line) => (
                 <li
                   key={`${split.store.id}-${line.itemId}`}
                   className="flex items-center justify-between gap-2 py-2 text-sm"
                 >
-                  <span className="text-slate-200">
+                  <span className="text-slate-800">
                     {line.name}{" "}
-                    <span className="text-slate-500">
+                    <span className="text-slate-600">
                       × {line.quantity} {line.unit}
                     </span>
                   </span>
-                  <span className="shrink-0 font-medium text-slate-300">
+                  <span className="shrink-0 font-medium text-slate-900">
                     {line.lineTotal.toFixed(2)} €
                   </span>
                 </li>
@@ -158,7 +158,7 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
         type="button"
         disabled={items.length === 0}
         onClick={() => onProceedToDispatch(basket)}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-accent px-4 py-3.5 text-sm font-bold text-navy shadow-[0_8px_32px_-8px_rgba(16,185,129,0.55)] transition hover:brightness-110 disabled:opacity-50"
+        className="neria-cta-n2o flex w-full items-center justify-center gap-2 px-4 py-3.5 text-sm disabled:opacity-50"
         whileTap={{ scale: 0.98 }}
       >
         Valider l&apos;optimisation &amp; Passer au Dispatch

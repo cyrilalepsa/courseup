@@ -83,10 +83,10 @@ export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
-        className={`relative overflow-hidden rounded-2xl border border-dashed p-8 text-center transition-colors ${
+        className={`neria-card relative overflow-hidden border-2 border-dashed p-8 text-center transition-colors ${
           isDragging
-            ? "border-emerald-accent/70 bg-emerald-500/10"
-            : "border-border bg-card/50 backdrop-blur-md hover:border-slate-500"
+            ? "border-blue-500 bg-blue-50/50"
+            : "border-slate-300 hover:border-blue-400"
         } ${phase === "processing" ? "pointer-events-none" : "cursor-pointer"}`}
         whileTap={{ scale: 0.99 }}
       >
@@ -107,14 +107,14 @@ export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
               exit={{ opacity: 0 }}
               className="flex min-h-[120px] flex-col items-center justify-center gap-3"
             >
-              <UploadCloud className="h-10 w-10 animate-pulse text-emerald-accent" />
-              <p className="text-sm font-medium text-emerald-300">{status || "Import…"}</p>
+              <UploadCloud className="h-10 w-10 animate-pulse text-blue-600" />
+              <p className="text-sm font-medium text-blue-700">{status || "Import…"}</p>
               {fileName && (
-                <p className="max-w-full truncate text-xs text-slate-500">{fileName}</p>
+                <p className="max-w-full truncate text-xs text-slate-600">{fileName}</p>
               )}
-              <div className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-navy/60">
+              <div className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-slate-200">
                 <div
-                  className="h-full bg-emerald-accent transition-all"
+                  className="h-full bg-blue-600 transition-all"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -127,12 +127,12 @@ export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
               exit={{ opacity: 0 }}
               className="flex flex-col items-center gap-3"
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-navy/50">
-                <FileText className="h-7 w-7 text-emerald-accent" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white">
+                <FileText className="h-7 w-7 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-100">Import fichier</p>
-                <p className="mt-1 text-xs text-slate-500">PDF · TXT · CSV (+ OCR image ticket)</p>
+                <p className="text-sm font-semibold text-slate-900">Import fichier</p>
+                <p className="mt-1 text-xs text-slate-600">PDF · TXT · CSV (+ OCR image ticket)</p>
               </div>
             </motion.div>
           )}
@@ -140,14 +140,14 @@ export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
 
         {phase === "done" && (
           <motion.p
-            className="mt-4 text-xs font-medium text-emerald-400"
+            className="mt-4 text-xs font-medium text-blue-700"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
             {lastCount} articles extraits
           </motion.p>
         )}
-        {error && <p className="mt-3 text-xs text-amber-300">{error}</p>}
+        {error && <p className="mt-3 text-xs text-amber-700">{error}</p>}
       </motion.div>
     </div>
   );

@@ -64,7 +64,7 @@ export function IngestionHub({ onOptimize }: IngestionHubProps) {
       <div
         role="tablist"
         aria-label="Modes d'ingestion"
-        className="flex gap-1 rounded-xl border border-border bg-navy/40 p-1 backdrop-blur-md"
+        className="neria-card flex gap-1 p-1"
       >
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -76,17 +76,10 @@ export function IngestionHub({ onOptimize }: IngestionHubProps) {
               role="tab"
               aria-selected={isActive}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative flex flex-1 flex-col items-center gap-1 rounded-lg px-1.5 py-2.5 text-[10px] font-semibold transition sm:px-2 sm:text-xs ${
-                isActive ? "text-white" : "text-slate-500 hover:text-slate-300"
+              className={`relative flex flex-1 flex-col items-center gap-1 px-1.5 py-2.5 text-[10px] font-semibold transition sm:px-2 sm:text-xs ${
+                isActive ? "neria-tab-active" : "neria-tab-idle"
               }`}
             >
-              {isActive && (
-                <motion.div
-                  layoutId="ingestion-tab"
-                  className="absolute inset-0 rounded-lg border border-border bg-card/90 shadow-sm"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
               <span className="relative z-10 inline-flex flex-col items-center gap-1 sm:flex-row">
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="hidden sm:inline">{tab.label}</span>
@@ -104,9 +97,9 @@ export function IngestionHub({ onOptimize }: IngestionHubProps) {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="space-y-3 rounded-2xl border border-border bg-card/50 p-4 backdrop-blur-md"
+            className="neria-card space-y-3 p-4"
           >
-            <label htmlFor="paste-text" className="text-xs font-medium text-slate-400">
+            <label htmlFor="paste-text" className="text-xs font-medium text-slate-600">
               Collez un ticket ou une liste (parser dynamique FR)
             </label>
             <textarea
@@ -117,9 +110,9 @@ export function IngestionHub({ onOptimize }: IngestionHubProps) {
               placeholder={
                 "2x LAIT DEMI ECREME 1.45€\nPAIN DE MIE 500G - 2,10 €\n3 pcs Oignons"
               }
-              className="w-full resize-none rounded-xl border border-border bg-navy/50 px-3 py-2.5 font-mono text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-emerald-500/40"
+              className="neria-input w-full resize-none px-3 py-2.5 font-mono text-sm placeholder:text-slate-500"
             />
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-600">
               Analyse instantanée · {parsedPreview.length} ligne
               {parsedPreview.length > 1 ? "s" : ""} détectée
               {parsedPreview.length > 1 ? "s" : ""}

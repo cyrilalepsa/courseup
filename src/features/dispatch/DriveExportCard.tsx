@@ -40,51 +40,51 @@ export function DriveExportCard({ checkout, index, onStatusChange }: DriveExport
 
   return (
     <motion.article
-      className="overflow-hidden rounded-2xl border border-border bg-card/60 backdrop-blur-md"
+      className="neria-card overflow-hidden"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06 }}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-navy/30 px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
             Drive {index + 1}
           </p>
-          <h3 className="text-sm font-bold text-white">{checkout.storeName}</h3>
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-300/90">
+          <h3 className="text-sm font-bold text-slate-900">{checkout.storeName}</h3>
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-blue-700">
             <ShieldCheck className="h-3.5 w-3.5" />
             Token affiliation {checkout.affiliationToken} · {ratePct}%
           </p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-bold text-white">{checkout.subtotal.toFixed(2)} €</p>
-          <p className="text-[10px] text-slate-500">{statusLabel}</p>
+          <p className="text-lg font-bold text-slate-900">{checkout.subtotal.toFixed(2)} €</p>
+          <p className="text-[10px] text-slate-600">{statusLabel}</p>
         </div>
       </div>
 
-      <ul className="max-h-40 divide-y divide-border/60 overflow-y-auto px-4 py-1">
+      <ul className="max-h-40 divide-y divide-slate-200 overflow-y-auto px-4 py-1">
         {checkout.items.map((line) => (
           <li
             key={line.itemId}
             className="flex items-center justify-between gap-2 py-2 text-sm"
           >
-            <span className="text-slate-200">
+            <span className="text-slate-800">
               {line.name}{" "}
-              <span className="text-slate-500">
+              <span className="text-slate-600">
                 × {line.quantity} {line.unit}
               </span>
             </span>
-            <span className="shrink-0 text-slate-400">{line.lineTotal.toFixed(2)} €</span>
+            <span className="shrink-0 text-slate-700">{line.lineTotal.toFixed(2)} €</span>
           </li>
         ))}
       </ul>
 
-      <div className="flex flex-col gap-2 border-t border-border p-4 sm:flex-row">
+      <div className="flex flex-col gap-2 border-t border-slate-200 p-4 sm:flex-row">
         <motion.button
           type="button"
           disabled={isExporting || checkout.status === "completed"}
           onClick={handleExport}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-accent px-4 py-2.5 text-sm font-bold text-navy transition hover:brightness-110 disabled:opacity-50"
+          className="neria-cta-primary inline-flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm disabled:opacity-50"
           whileTap={{ scale: 0.98 }}
         >
           {isExporting ? (
@@ -103,7 +103,7 @@ export function DriveExportCard({ checkout, index, onStatusChange }: DriveExport
           <button
             type="button"
             onClick={markComplete}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-300"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800"
           >
             <ExternalLink className="h-4 w-4" />
             J&apos;ai finalisé ce drive
