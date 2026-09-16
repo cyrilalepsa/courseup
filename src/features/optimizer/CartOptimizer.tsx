@@ -3,7 +3,7 @@ import { Clock, Layers, Leaf, Store, TrendingDown } from "lucide-react";
 import { useMemo } from "react";
 import type { IngestedItem } from "@/types/ingestion";
 import type { OptimizationMode, OptimizedBasket } from "@/types/optimizer";
-import { MODE_META, optimizeCart } from "./optimizeCart";
+import { MODE_META, optimizeCart, type OptimizeCartOptions } from "./optimizeCart";
 
 const MODE_ICONS: Record<OptimizationMode, typeof Store> = {
   monopoly: Clock,
@@ -16,6 +16,7 @@ interface CartOptimizerProps {
   mode: OptimizationMode;
   onModeChange: (mode: OptimizationMode) => void;
   basket: OptimizedBasket;
+  optimizeOptions?: OptimizeCartOptions;
 }
 
 export function CartOptimizer({
@@ -23,15 +24,16 @@ export function CartOptimizer({
   mode,
   onModeChange,
   basket,
+  optimizeOptions,
 }: CartOptimizerProps) {
   const modes = useMemo(
     () =>
       (Object.keys(MODE_META) as OptimizationMode[]).map((id) => ({
         id,
         ...MODE_META[id],
-        preview: optimizeCart(items, id),
+        preview: optimizeCart(items, id, optimizeOptions),
       })),
-    [items],
+    [items, optimizeOptions],
   );
 
   return (

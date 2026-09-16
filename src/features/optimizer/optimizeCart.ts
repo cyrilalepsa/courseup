@@ -8,6 +8,8 @@ import type {
   PartnerStoreId,
   StoreSplit,
 } from "@/types/optimizer";
+import { computeMultiDriveTripKm } from "@/services/locationService";
+import type { DriveStore, StoreBrand } from "@/types/store";
 
 export const PARTNER_DRIVES: PartnerDrive[] = [
   {
@@ -50,6 +52,43 @@ export const PARTNER_DRIVES: PartnerDrive[] = [
 
 const DRIVES = PARTNER_DRIVES.filter((s) => s.type === "drive");
 const SELYS = PARTNER_DRIVES.find((s) => s.id === "selys-local")!;
+
+export interface OptimizeCartOptions {
+  selectedStores?: Partial<Record<StoreBrand, DriveStore>>;
+}
+
+function partnerBrand(partnerId: PartnerStoreId): StoreBrand | null {
+  switch (partnerId) {
+    case "carrefour":
+      return "carrefour";
+    case "leclerc":
+      return "leclerc";
+    case "auchan":
+      return "auchan";
+    case "selys-local":
+      return "selys";
+    default:
+      return null;
+  }
+}
+
+function enrichSplits(
+  splits: StoreSplit[],
+  options?: OptimizeCartOptions,
+): StoreSplit[] {
+  if (!options?.selectedStores) return splits;
+  return splits.map((split) => {
+    const brand = partnerBrand(split.store.id);
+    const physical = brand ? options.selectedStores?.[brand] : undefined;
+    if (!physical) return split;
+    return {
+      ...split,
+      physicalStore: physical,
+      displayName: physical.name,
+      tripDistanceKm: physical.distanceKm,
+    };
+  });
+}
 
 const CATEGORY_BASE: Record<ItemCategory, number> = {
   frais: 3.2,
@@ -156,6 +195,7 @@ function summarize(
       : Number(rawPercent.toFixed(1));
 
   const n2o = computeN2O(mode, optimizedTotal, splits);
+  const totalTripDistanceKm = computeMultiDriveTripKm(splits);
 
   return {
     mode,
@@ -169,12 +209,32 @@ function summarize(
       storeCount: splits.length,
       estimatedTrips: splits.length,
       timeScoreLabel,
+      totalTripDistanceKm,
     },
     n2o,
   };
 }
 
-function optimizeMonopoly(items: IngestedItem[]): OptimizedBasket {
+function finalizeBasket(
+  mode: OptimizationMode,
+  splits: StoreSplit[],
+  items: IngestedItem[],
+  timeScoreLabel: string,
+  options?: OptimizeCartOptions,
+): OptimizedBasket {
+  const enriched = enrichSplits(splits, options);
+  const tripKm = computeMultiDriveTripKm(enriched);
+  const label =
+    tripKm > 0
+      ? `${timeScoreLabel} · ~${tripKm} km trajets`
+      : timeScoreLabel;
+  return summarize(mode, enriched, items, label);
+}
+
+function optimizeMonopoly(
+  items: IngestedItem[],
+  options?: OptimizeCartOptions,
+): OptimizedBasket {
   let bestStore = DRIVES[0];
   let bestTotal = Infinity;
 
@@ -190,10 +250,19 @@ function optimizeMonopoly(items: IngestedItem[]): OptimizedBasket {
   }
 
   const lines = items.map((item) => lineForStore(item, bestStore));
-  return summarize("monopoly", [buildSplit(bestStore, lines)], items, "1 trajet · gain temps max");
+  return finalizeBasket(
+    "monopoly",
+    [buildSplit(bestStore, lines)],
+    items,
+    "1 trajet · gain temps max",
+    options,
+  );
 }
 
-function optimizeMultiDrive(items: IngestedItem[]): OptimizedBasket {
+function optimizeMultiDrive(
+  items: IngestedItem[],
+  options?: OptimizeCartOptions,
+): OptimizedBasket {
   const byStore = new Map<PartnerStoreId, AssignedLineItem[]>();
 
   for (const item of items) {
@@ -236,15 +305,19 @@ function optimizeMultiDrive(items: IngestedItem[]): OptimizedBasket {
     splits = keep;
   }
 
-  return summarize(
+  return finalizeBasket(
     "multi-drive",
     splits,
     items,
     `${splits.length} drives · économie max`,
+    options,
   );
 }
 
-function optimizeHybridSelys(items: IngestedItem[]): OptimizedBasket {
+function optimizeHybridSelys(
+  items: IngestedItem[],
+  options?: OptimizeCartOptions,
+): OptimizedBasket {
   const selysItems: AssignedLineItem[] = [];
   const remaining: IngestedItem[] = [];
 
@@ -282,17 +355,19 @@ function optimizeHybridSelys(items: IngestedItem[]): OptimizedBasket {
     splits.push(buildSplit(store, lines));
   }
 
-  return summarize(
+  return finalizeBasket(
     "hybrid-selys",
     splits,
     items,
     "Circuits courts prioritaires",
+    options,
   );
 }
 
 export function optimizeCart(
   items: IngestedItem[],
   mode: OptimizationMode,
+  options?: OptimizeCartOptions,
 ): OptimizedBasket {
   if (items.length === 0) {
     return summarize(mode, [], items, "—");
@@ -300,13 +375,13 @@ export function optimizeCart(
 
   switch (mode) {
     case "monopoly":
-      return optimizeMonopoly(items);
+      return optimizeMonopoly(items, options);
     case "multi-drive":
-      return optimizeMultiDrive(items);
+      return optimizeMultiDrive(items, options);
     case "hybrid-selys":
-      return optimizeHybridSelys(items);
+      return optimizeHybridSelys(items, options);
     default:
-      return optimizeMonopoly(items);
+      return optimizeMonopoly(items, options);
   }
 }
 
