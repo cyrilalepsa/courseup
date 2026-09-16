@@ -7,8 +7,9 @@ import {
   RotateCcw,
   Truck,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DispatchOrder, DispatchStatus } from "@/types/dispatch";
+import { useCourseUp } from "@/context/CourseUpContext";
 import {
   computeGlobalStatus,
   createDispatchOrder,
@@ -25,7 +26,9 @@ interface DispatchHubProps {
 }
 
 export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
+  const { addN2OBalance, saveOrder } = useCourseUp();
   const [order, setOrder] = useState<DispatchOrder>(() => createDispatchOrder(basket));
+  const orderPersistedRef = useRef(false);
 
   const steps = useMemo(() => stepsFromOrder(order), [order]);
 
@@ -55,6 +58,14 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
   }, []);
 
   const allDone = order.globalStatus === "completed";
+
+  useEffect(() => {
+    if (!allDone || orderPersistedRef.current) return;
+    orderPersistedRef.current = true;
+    const finalized: DispatchOrder = { ...order, globalStatus: "completed" };
+    void saveOrder(finalized);
+    addN2OBalance(order.totalN2OCredited);
+  }, [addN2OBalance, allDone, order.id, order.totalN2OCredited, saveOrder]);
 
   return (
     <motion.div
@@ -175,7 +186,8 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
-          Parcours dispatch terminé — N2O crédité sur votre compte NeriaCorp.
+          Parcours dispatch terminé — +{order.totalN2OCredited} N2O crédités sur votre solde
+          local.
         </motion.p>
       )}
 

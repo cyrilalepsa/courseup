@@ -2,45 +2,47 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Header } from "@/components/layout/Header";
+import { useCourseUp } from "@/context/CourseUpContext";
 import { DispatchHub } from "@/features/dispatch/DispatchHub";
 import { IngestionHub } from "@/features/ingestion/IngestionHub";
 import { OptimizerHub } from "@/features/optimizer/OptimizerHub";
-import type { IngestedItem } from "@/types/ingestion";
 import type { OptimizedBasket } from "@/types/optimizer";
 
 type AppStep = "ingestion" | "optimizer" | "dispatch";
 
 const STEP_COPY: Record<
   AppStep,
-  { step: string; title: string; description: string }
+  { sprint: string; step: string; title: string; description: string }
 > = {
   ingestion: {
+    sprint: "Sprint 2",
     step: "Étape 1",
-    title: "CourseUp v1.0 — Ingestion Intelligente",
+    title: "CourseUp — Ingestion & persistance locale",
     description:
-      "Importez tickets, texte ou listes depuis l'écosystème NeriaCorp. Validez vos articles avant l'optimisation multi-enseignes N2O.",
+      "Importez et validez vos articles. Le panier est sauvegardé automatiquement en local (offline-first).",
   },
   optimizer: {
+    sprint: "Sprint 1",
     step: "Étape 2",
     title: "CourseUp v1.0 — Optimiseur Multi-Enseignes N2O",
     description:
       "Dispatch algorithmique Carrefour, Leclerc, Auchan et circuits Selys — cashback affiliation et conversion N2O en temps réel.",
   },
   dispatch: {
+    sprint: "Sprint 1",
     step: "Étape 3",
     title: "CourseUp v1.0 — Hub de Dispatch",
     description:
-      "Export des paniers vers les drives affiliés, génération des bons Selys et crédit N2O — suivez chaque checkout jusqu'à la validation.",
+      "Export des paniers vers les drives affiliés, génération des bons Selys et crédit N2O sur votre solde persistant.",
   },
 };
 
 export default function App() {
+  const { items, clearCart } = useCourseUp();
   const [step, setStep] = useState<AppStep>("ingestion");
-  const [validatedItems, setValidatedItems] = useState<IngestedItem[]>([]);
   const [optimizedBasket, setOptimizedBasket] = useState<OptimizedBasket | null>(null);
 
-  const handleOptimize = useCallback((items: IngestedItem[]) => {
-    setValidatedItems(items);
+  const handleOptimize = useCallback(() => {
     setStep("optimizer");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
@@ -62,11 +64,11 @@ export default function App() {
   }, []);
 
   const handleNewOrder = useCallback(() => {
-    setValidatedItems([]);
+    clearCart();
     setOptimizedBasket(null);
     setStep("ingestion");
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  }, [clearCart]);
 
   const copy = STEP_COPY[step];
 
@@ -93,7 +95,7 @@ export default function App() {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-emerald-accent/90">
-                Sprint 1 · {copy.step}
+                {copy.sprint} · {copy.step}
               </p>
               <h2 className="mt-0.5 text-lg font-bold text-white sm:text-xl">{copy.title}</h2>
               <p className="mt-1 text-sm leading-relaxed text-slate-400">{copy.description}</p>
@@ -122,7 +124,7 @@ export default function App() {
               transition={{ duration: 0.3 }}
             >
               <OptimizerHub
-                items={validatedItems}
+                items={items}
                 onBack={handleBackToIngestion}
                 onProceedToDispatch={handleProceedDispatch}
               />
