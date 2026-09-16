@@ -10,25 +10,28 @@ import { useCallback, useEffect, useState } from "react";
 
 type ConnectionStatus = "online" | "offline";
 
+function detectStandalone(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    ("standalone" in navigator &&
+      (navigator as Navigator & { standalone?: boolean }).standalone === true)
+  );
+}
+
 export function Header() {
   const [connection, setConnection] = useState<ConnectionStatus>(
     typeof navigator !== "undefined" && navigator.onLine ? "online" : "offline",
   );
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const [isStandalone] = useState(detectStandalone);
 
   useEffect(() => {
     const onOnline = () => setConnection("online");
     const onOffline = () => setConnection("offline");
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
-
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      ("standalone" in navigator &&
-        (navigator as Navigator & { standalone?: boolean }).standalone === true);
-    setIsStandalone(standalone);
 
     const onBeforeInstall = (e: BeforeInstallPromptEvent) => {
       e.preventDefault();
