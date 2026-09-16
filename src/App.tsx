@@ -2,10 +2,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CheckoutPassModal } from "@/components/checkout/CheckoutPassModal";
+import { DemoCockpitBar } from "@/components/debug/DemoCockpitBar";
 import { N2ODashboard } from "@/components/dashboard/N2ODashboard";
 import { Header } from "@/components/layout/Header";
 import { InStoreMode } from "@/components/instore/InStoreMode";
-import { useCourseUp } from "@/context/CourseUpContext";
+import { useCourseUp } from "@/context/useCourseUp";
 import { DispatchHub } from "@/features/dispatch/DispatchHub";
 import { IngestionHub } from "@/features/ingestion/IngestionHub";
 import { OptimizerHub } from "@/features/optimizer/OptimizerHub";
@@ -19,11 +20,11 @@ const STEP_COPY: Record<
   { sprint: string; step: string; title: string; description: string }
 > = {
   ingestion: {
-    sprint: "Sprint 4",
+    sprint: "Sprint 5",
     step: "Étape 1",
-    title: "CourseUp — Ingestion & Nutri-Score",
+    title: "CourseUp — Recette Cockpit & démo multi-tenant",
     description:
-      "Saisie directe ou import : auto-complétion, tags régimes à la volée, badges Nutri A→F et préparation du parcours macro-rayons.",
+      "Barre recette démo : rôles Super Admin/VIP/Complimentary/Standard, commerçants Selys injectés et simulations postMessage.",
   },
   optimizer: {
     sprint: "Sprint 4",
@@ -50,6 +51,7 @@ export default function App() {
     gamificationBadges,
     checkoutWallet,
     redeemMerchantReward,
+    cockpitDemoProfile,
   } = useCourseUp();
   const [step, setStep] = useState<AppStep>("ingestion");
   const [optimizedBasket, setOptimizedBasket] = useState<OptimizedBasket | null>(null);
@@ -239,7 +241,10 @@ export default function App() {
         badges={gamificationBadges}
         onRedeemReward={handleRedeemReward}
         redeemError={redeemError}
+        cockpitProfile={cockpitDemoProfile}
       />
+
+      <DemoCockpitBar />
     </div>
   );
 }

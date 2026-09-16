@@ -6,8 +6,12 @@ import {
   isBadgeUnlocked,
 } from "@/services/badgeService";
 import { getCashbackConfig } from "@/services/cashbackService";
-import { SELYS_MERCHANT_REWARDS } from "@/config/merchantRewards";
+import {
+  effectiveRewardCost,
+  getMerchantRewardCatalog,
+} from "@/services/merchantCatalogService";
 import type { CashbackLedgerEntry } from "@/types/cashback";
+import type { CockpitDemoProfile } from "@/types/cockpitDemo";
 import type { GamificationBadgeRecord } from "@/types/gamification";
 
 interface N2ODashboardProps {
@@ -18,6 +22,7 @@ interface N2ODashboardProps {
   badges: GamificationBadgeRecord[];
   onRedeemReward: (rewardId: string) => void;
   redeemError: string | null;
+  cockpitProfile: CockpitDemoProfile;
 }
 
 export function N2ODashboard({
@@ -28,8 +33,10 @@ export function N2ODashboard({
   badges,
   onRedeemReward,
   redeemError,
+  cockpitProfile,
 }: N2ODashboardProps) {
   const config = getCashbackConfig();
+  const rewards = getMerchantRewardCatalog();
   const totals = useMemo(() => {
     const savingsEuro = ledger.reduce((s, e) => s + e.savingsEuro, 0);
     const tokens = ledger.reduce((s, e) => s + e.tokensGranted, 0);
@@ -71,6 +78,9 @@ export function N2ODashboard({
             <p className="mt-0.5 text-xs text-slate-600">
               Ratio configurable · {config.eurosPerN2OToken} € d&apos;économie = 1 jeton
             </p>
+            <span className="neria-badge neria-badge-tag mt-1 inline-block text-[10px]">
+              Profil Cockpit · {cockpitProfile.label}
+            </span>
           </div>
           <button
             type="button"
@@ -140,8 +150,9 @@ export function N2ODashboard({
               <p className="mb-2 text-xs font-medium text-rose-600">{redeemError}</p>
             )}
             <ul className="space-y-2">
-              {SELYS_MERCHANT_REWARDS.map((reward) => {
-                const affordable = n2oBalance >= reward.n2oCost;
+              {rewards.map((reward) => {
+                const cost = effectiveRewardCost(reward, cockpitProfile);
+                const affordable = n2oBalance >= cost;
                 return (
                   <li key={reward.id} className="neria-card p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -153,7 +164,10 @@ export function N2ODashboard({
                         <p className="mt-0.5 text-xs text-slate-600">{reward.description}</p>
                       </div>
                       <span className="neria-badge-n2o shrink-0 text-[10px]">
-                        {reward.n2oCost} N2O
+                        {cost} N2O
+                        {cost !== reward.n2oCost && (
+                          <span className="ml-1 opacity-70 line-through">{reward.n2oCost}</span>
+                        )}
                       </span>
                     </div>
                     <button

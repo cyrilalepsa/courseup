@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -76,59 +74,28 @@ import {
   saveCashbackLedger,
   saveGamificationBadges,
 } from "@/services/syncManager";
-import { DEFAULT_CHECKOUT_WALLET } from "@/config/checkoutWallet";
-import { SELYS_MERCHANT_REWARDS } from "@/config/merchantRewards";
 import type { CashbackLedgerEntry } from "@/types/cashback";
 import type { CheckoutWalletState } from "@/types/checkout";
-import type { ExportBundle } from "@/types/export";
 import type { GamificationBadgeRecord } from "@/types/gamification";
+import type { ExportBundle } from "@/types/export";
+import { DEFAULT_CHECKOUT_WALLET } from "@/config/checkoutWallet";
+import { CourseUpContext } from "@/context/courseUpContext";
+import {
+  getActiveDemoProfile,
+  purgeDemoIndexedDb,
+  simulateGeofenceUnder2km,
+  simulateN2OSync,
+  subscribeDemoProfile,
+  switchDemoRole,
+} from "@/services/demoCockpitService";
+import {
+  effectiveRewardCost,
+  getMerchantRewardCatalog,
+  injectDemoMerchantCatalog,
+} from "@/services/merchantCatalogService";
+import type { CockpitDemoProfile, CockpitDemoRole } from "@/types/cockpitDemo";
 import type { OptimizedBasket } from "@/types/optimizer";
 
-interface CourseUpContextValue {
-  isHydrated: boolean;
-  items: IngestedItem[];
-  n2oBalance: number;
-  ordersHistory: DispatchOrder[];
-  cashbackLedger: CashbackLedgerEntry[];
-  gamificationBadges: GamificationBadgeRecord[];
-  checkoutWallet: CheckoutWalletState;
-  locationPrefs: LocationPreferences;
-  nearbyStores: DriveStore[];
-  selectedStores: Partial<Record<StoreBrand, DriveStore>>;
-  selysGeofenceActive: boolean;
-  isLocating: boolean;
-  locationError: string | null;
-  storeSelectorOpen: boolean;
-  setStoreSelectorOpen: (open: boolean) => void;
-  setItems: (items: IngestedItem[]) => void;
-  addItem: (item?: Partial<IngestedItem> & Pick<IngestedItem, "name">) => void;
-  removeItem: (id: string) => void;
-  clearCart: () => void;
-  addN2OBalance: (amount: number) => void;
-  creditDispatchCompletion: (
-    order: DispatchOrder,
-    basket: OptimizedBasket,
-    bundle: ExportBundle,
-  ) => void;
-  redeemMerchantReward: (rewardId: string) => boolean;
-  saveOrder: (order: DispatchOrder) => Promise<void>;
-  setSearchRadius: (radius: SearchRadiusKm) => void;
-  setManualLocation: (postalCode: string, city: string) => void;
-  requestGpsLocation: () => Promise<void>;
-  setSelectedStore: (brand: StoreBrand, storeId: string) => void;
-  notificationPrefs: NotificationPreferences;
-  notificationPermission: NotificationPermissionState;
-  notificationSettingsOpen: boolean;
-  setNotificationSettingsOpen: (open: boolean) => void;
-  setNotificationPref: <K extends keyof NotificationPreferences>(
-    key: K,
-    value: NotificationPreferences[K],
-  ) => void;
-  refreshNotificationPermission: () => void;
-  requestNotificationsAccess: () => Promise<NotificationPermissionState>;
-}
-
-const CourseUpContext = createContext<CourseUpContextValue | null>(null);
 
 function withNearbyStores(prefs: LocationPreferences) {
   const nearby = filterStoresInRadius(prefs.coordinates, prefs.searchRadiusKm);
@@ -173,10 +140,22 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     useState<NotificationPermissionState>(() => getNotificationPermission());
   const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   const notificationPrefsRef = useRef(notificationPrefs);
+  const cockpitProfileRef = useRef(getActiveDemoProfile());
+  const [cockpitDemoProfile, setCockpitDemoProfile] = useState<CockpitDemoProfile>(
+    () => getActiveDemoProfile(),
+  );
 
   useEffect(() => {
     notificationPrefsRef.current = notificationPrefs;
   }, [notificationPrefs]);
+
+  useEffect(() => {
+    injectDemoMerchantCatalog();
+    return subscribeDemoProfile((profile) => {
+      cockpitProfileRef.current = profile;
+      setCockpitDemoProfile(profile);
+    });
+  }, []);
 
   useEffect(() => {
     const onCockpitConfig = (event: Event) => {
@@ -464,17 +443,36 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   );
 
   const redeemMerchantReward = useCallback((rewardId: string): boolean => {
-    const reward = SELYS_MERCHANT_REWARDS.find((r) => r.id === rewardId);
+    const reward = getMerchantRewardCatalog().find((r) => r.id === rewardId);
     if (!reward) return false;
+    const cost = effectiveRewardCost(reward, cockpitProfileRef.current);
     let ok = false;
     setN2oBalance((prev) => {
-      if (prev < reward.n2oCost) return prev;
+      if (prev < cost) return prev;
       ok = true;
-      const next = prev - reward.n2oCost;
+      const next = prev - cost;
       void saveN2OBalance(next);
       return next;
     });
     return ok;
+  }, []);
+
+  const switchDemoCockpitRole = useCallback((role: CockpitDemoRole) => {
+    switchDemoRole(role);
+  }, []);
+
+  const triggerDemoGeofenceAlert = useCallback(async () => {
+    return simulateGeofenceUnder2km();
+  }, []);
+
+  const triggerDemoN2OSync = useCallback(async () => {
+    await simulateN2OSync((amount) => {
+      addN2OBalance(amount);
+    });
+  }, [addN2OBalance]);
+
+  const purgeLocalCourseUpData = useCallback(async () => {
+    await purgeDemoIndexedDb();
   }, []);
 
   const setSearchRadius = useCallback(
@@ -537,6 +535,7 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       cashbackLedger,
       gamificationBadges,
       checkoutWallet,
+      cockpitDemoProfile,
       locationPrefs,
       nearbyStores,
       selectedStores,
@@ -559,6 +558,10 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       addN2OBalance,
       creditDispatchCompletion,
       redeemMerchantReward,
+      switchDemoCockpitRole,
+      triggerDemoGeofenceAlert,
+      triggerDemoN2OSync,
+      purgeLocalCourseUpData,
       saveOrder,
       setSearchRadius,
       setManualLocation,
@@ -573,6 +576,7 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       cashbackLedger,
       gamificationBadges,
       checkoutWallet,
+      cockpitDemoProfile,
       locationPrefs,
       nearbyStores,
       selectedStores,
@@ -593,6 +597,10 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       addN2OBalance,
       creditDispatchCompletion,
       redeemMerchantReward,
+      switchDemoCockpitRole,
+      triggerDemoGeofenceAlert,
+      triggerDemoN2OSync,
+      purgeLocalCourseUpData,
       saveOrder,
       setSearchRadius,
       setManualLocation,
@@ -615,12 +623,4 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   }
 
   return <CourseUpContext.Provider value={value}>{children}</CourseUpContext.Provider>;
-}
-
-export function useCourseUp(): CourseUpContextValue {
-  const ctx = useContext(CourseUpContext);
-  if (!ctx) {
-    throw new Error("useCourseUp must be used within CourseUpProvider");
-  }
-  return ctx;
 }

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StoreSelector } from "@/components/store/StoreSelector";
-import { useCourseUp } from "@/context/CourseUpContext";
+import { useCourseUp } from "@/context/useCourseUp";
 import { NutritionFilterPanel } from "@/components/optimizer/NutritionFilterPanel";
 import { applyItemFilters } from "@/services/filterService";
 import type { IngestedItem } from "@/types/ingestion";

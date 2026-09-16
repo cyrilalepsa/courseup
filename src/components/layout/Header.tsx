@@ -13,7 +13,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { StoreSelector } from "@/components/store/StoreSelector";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
-import { useCourseUp } from "@/context/CourseUpContext";
+import { useCourseUp } from "@/context/useCourseUp";
 
 type ConnectionStatus = "online" | "offline";
 

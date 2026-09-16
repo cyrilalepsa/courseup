@@ -202,3 +202,28 @@ export async function loadInStoreSession(): Promise<InStoreSessionState | null> 
 export async function saveInStoreSession(session: InStoreSessionState): Promise<void> {
   await storageWrite(STORAGE_KEYS.instoreSession, session);
 }
+
+/** Purge IndexedDB CourseUp + clés localStorage (recette démo). */
+export async function purgeAllCourseUpStorage(): Promise<void> {
+  for (const key of Object.values(STORAGE_KEYS)) {
+    try {
+      localStorage.removeItem(LS_PREFIX + key);
+    } catch {
+      /* ignore */
+    }
+  }
+  try {
+    localStorage.removeItem("courseup:bridge-registry:v1");
+  } catch {
+    /* ignore */
+  }
+
+  if (typeof indexedDB === "undefined") return;
+
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DB_NAME);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error("IndexedDB purge failed"));
+    request.onblocked = () => resolve();
+  });
+}

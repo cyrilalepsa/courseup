@@ -221,4 +221,8 @@ body {
   .neria-badge-gamification-heritia {
     @apply border-rose-500/40 bg-rose-100 text-rose-900;
   }
+
+  .neria-demo-bar {
+    @apply border border-violet-300/80 shadow-xl shadow-violet-900/20;
+  }
 }

@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { ListPlus, Camera, FileUp, Link2, Share2, Type } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExportModal } from "@/components/export/ExportModal";
-import { useCourseUp } from "@/context/CourseUpContext";
+import { useCourseUp } from "@/context/useCourseUp";
 import { createExportBundle } from "@/services/exportService";
 import { parseReceiptText } from "@/services/textParserService";
 import type { IngestedItem } from "@/types/ingestion";
