@@ -1,4 +1,5 @@
 import type { IngestedItem, IngestionItemSource } from "@/types/ingestion";
+import { parseReceiptText } from "@/services/textParserService";
 
 let idCounter = 0;
 
@@ -113,26 +114,5 @@ export function ecosystemToItems(
 }
 
 export function parseTextToItems(text: string): IngestedItem[] {
-  const lines = text
-    .split(/\n|,|;/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  if (lines.length === 0) {
-    return MOCK_TEXT_ITEMS;
-  }
-
-  return lines.map((line, index) => {
-    const match = line.match(/^(\d+(?:[.,]\d+)?)\s*(\w+)?\s+(.+)$/);
-    if (match) {
-      const qty = parseFloat(match[1].replace(",", "."));
-      const unit = match[2] ?? "u";
-      const name = match[3];
-      return createIngestedItem(
-        { name, quantity: qty, unit, confidenceScore: 0.7 + (index % 3) * 0.08 },
-        "text",
-      );
-    }
-    return createIngestedItem({ name: line, confidenceScore: 0.72 }, "text");
-  });
+  return parseReceiptText(text, "text");
 }
