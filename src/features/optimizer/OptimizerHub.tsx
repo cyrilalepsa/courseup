@@ -1,14 +1,13 @@
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
-  CheckCircle2,
   ChevronRight,
   MapPin,
   ShoppingCart,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { IngestedItem } from "@/types/ingestion";
-import type { OptimizationMode } from "@/types/optimizer";
+import type { OptimizationMode, OptimizedBasket } from "@/types/optimizer";
 import { CartOptimizer } from "./CartOptimizer";
 import { N2OCalculator } from "./N2OCalculator";
 import { optimizeCart } from "./optimizeCart";
@@ -16,11 +15,11 @@ import { optimizeCart } from "./optimizeCart";
 interface OptimizerHubProps {
   items: IngestedItem[];
   onBack: () => void;
+  onProceedToDispatch: (basket: OptimizedBasket) => void;
 }
 
-export function OptimizerHub({ items, onBack }: OptimizerHubProps) {
+export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHubProps) {
   const [mode, setMode] = useState<OptimizationMode>("multi-drive");
-  const [dispatchConfirmed, setDispatchConfirmed] = useState(false);
 
   const basket = useMemo(() => optimizeCart(items, mode), [items, mode]);
 
@@ -125,26 +124,13 @@ export function OptimizerHub({ items, onBack }: OptimizerHubProps) {
 
       <motion.button
         type="button"
-        disabled={dispatchConfirmed || items.length === 0}
-        onClick={() => setDispatchConfirmed(true)}
-        className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold transition ${
-          dispatchConfirmed
-            ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-            : "bg-emerald-accent text-navy shadow-[0_8px_32px_-8px_rgba(16,185,129,0.55)] hover:brightness-110"
-        }`}
+        disabled={items.length === 0}
+        onClick={() => onProceedToDispatch(basket)}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-accent px-4 py-3.5 text-sm font-bold text-navy shadow-[0_8px_32px_-8px_rgba(16,185,129,0.55)] transition hover:brightness-110 disabled:opacity-50"
         whileTap={{ scale: 0.98 }}
       >
-        {dispatchConfirmed ? (
-          <>
-            <CheckCircle2 className="h-5 w-5" />
-            Dispatch N2O en file d&apos;attente
-          </>
-        ) : (
-          <>
-            Valider l&apos;optimisation &amp; Passer au Dispatch
-            <ChevronRight className="h-4 w-4" />
-          </>
-        )}
+        Valider l&apos;optimisation &amp; Passer au Dispatch
+        <ChevronRight className="h-4 w-4" />
       </motion.button>
     </motion.div>
   );
