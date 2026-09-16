@@ -16,10 +16,10 @@ const STEP_COPY: Record<
 > = {
   ingestion: {
     sprint: "Sprint 2",
-    step: "Étape 1",
-    title: "CourseUp — Ingestion & persistance locale",
+    step: "Étape 3",
+    title: "CourseUp — OCR & parser multi-format",
     description:
-      "Importez et validez vos articles. Le panier est sauvegardé automatiquement en local (offline-first).",
+      "Scannez un ticket (Tesseract), collez du texte ou importez PDF/TXT/CSV. Les articles sont parsés avec score de confiance OCR.",
   },
   optimizer: {
     sprint: "Sprint 2",

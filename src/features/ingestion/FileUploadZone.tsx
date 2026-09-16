@@ -1,42 +1,62 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, FileText, UploadCloud } from "lucide-react";
+import { FileText, UploadCloud } from "lucide-react";
 import { useCallback, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
+import { parseUploadedFile } from "@/services/ocrService";
 import type { IngestedItem } from "@/types/ingestion";
-import { MOCK_FILE_ITEMS } from "./mockIngestion";
 
-const ACCEPT = ".pdf,.png,.jpg,.jpeg,.csv,application/pdf,image/png,image/jpeg,text/csv";
+const ACCEPT =
+  ".pdf,.txt,.csv,.png,.jpg,.jpeg,application/pdf,text/plain,text/csv,image/png,image/jpeg";
 
 interface FileUploadZoneProps {
   onItemsExtracted: (items: IngestedItem[]) => void;
 }
 
-type Phase = "idle" | "scanning" | "done";
+type Phase = "idle" | "processing" | "done" | "error";
 
 export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [lastCount, setLastCount] = useState(0);
 
-  const runScan = useCallback(
-    (name: string) => {
-      setFileName(name);
-      setPhase("scanning");
-      window.setTimeout(() => {
+  const processFile = useCallback(
+    async (file: File) => {
+      setFileName(file.name);
+      setPhase("processing");
+      setProgress(0);
+      setError(null);
+      try {
+        const items = await parseUploadedFile(file, (p, label) => {
+          setProgress(Math.round(p * 100));
+          setStatus(label);
+        });
+        if (items.length === 0) {
+          setPhase("error");
+          setError("Aucun article détecté dans ce fichier.");
+          return;
+        }
+        setLastCount(items.length);
+        onItemsExtracted(items);
         setPhase("done");
-        onItemsExtracted(MOCK_FILE_ITEMS);
-        window.setTimeout(() => setPhase("idle"), 1200);
-      }, 2200);
+        window.setTimeout(() => setPhase("idle"), 1400);
+      } catch {
+        setPhase("error");
+        setError("Import impossible — format PDF/TXT/CSV ou image ticket requis.");
+      }
     },
     [onItemsExtracted],
   );
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
-      if (!files?.length || phase === "scanning") return;
-      runScan(files[0].name);
+      if (!files?.length || phase === "processing") return;
+      void processFile(files[0]);
     },
-    [phase, runScan],
+    [phase, processFile],
   );
 
   const onDrop = useCallback(
@@ -56,7 +76,7 @@ export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
         onKeyDown={(e: KeyboardEvent) => {
           if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
         }}
-        onClick={() => phase !== "scanning" && inputRef.current?.click()}
+        onClick={() => phase !== "processing" && inputRef.current?.click()}
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
@@ -67,7 +87,7 @@ export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
           isDragging
             ? "border-emerald-accent/70 bg-emerald-500/10"
             : "border-border bg-card/50 backdrop-blur-md hover:border-slate-500"
-        } ${phase === "scanning" ? "pointer-events-none" : "cursor-pointer"}`}
+        } ${phase === "processing" ? "pointer-events-none" : "cursor-pointer"}`}
         whileTap={{ scale: 0.99 }}
       >
         <input
@@ -79,30 +99,25 @@ export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
         />
 
         <AnimatePresence mode="wait">
-          {phase === "scanning" ? (
+          {phase === "processing" ? (
             <motion.div
-              key="scan"
+              key="proc"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="relative flex min-h-[140px] flex-col items-center justify-center gap-3"
+              className="flex min-h-[120px] flex-col items-center justify-center gap-3"
             >
-              <div className="relative h-24 w-full max-w-xs overflow-hidden rounded-lg border border-border bg-navy/80">
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_0%,rgba(16,185,129,0.08)_50%,transparent_100%)]" />
-                <motion.div
-                  className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-accent to-transparent shadow-[0_0_12px_2px_rgba(16,185,129,0.8)]"
-                  initial={{ top: "0%" }}
-                  animate={{ top: ["0%", "100%", "0%"] }}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
-                />
-                <Camera className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-slate-600" />
-              </div>
-              <p className="text-sm font-medium text-emerald-300">
-                Scan OCR en cours…
-              </p>
+              <UploadCloud className="h-10 w-10 animate-pulse text-emerald-accent" />
+              <p className="text-sm font-medium text-emerald-300">{status || "Import…"}</p>
               {fileName && (
                 <p className="max-w-full truncate text-xs text-slate-500">{fileName}</p>
               )}
+              <div className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-navy/60">
+                <div
+                  className="h-full bg-emerald-accent transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -113,23 +128,11 @@ export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
               className="flex flex-col items-center gap-3"
             >
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-navy/50">
-                <UploadCloud className="h-7 w-7 text-emerald-accent" />
+                <FileText className="h-7 w-7 text-emerald-accent" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-100">
-                  Glissez un ticket, une recette ou un fichier
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  PDF, PNG, JPG, CSV — ou touchez pour parcourir
-                </p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2 text-[10px] text-slate-500">
-                <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5">
-                  <Camera className="h-3 w-3" /> Photo ticket
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5">
-                  <FileText className="h-3 w-3" /> Export CSV
-                </span>
+                <p className="text-sm font-semibold text-slate-100">Import fichier</p>
+                <p className="mt-1 text-xs text-slate-500">PDF · TXT · CSV (+ OCR image ticket)</p>
               </div>
             </motion.div>
           )}
@@ -141,9 +144,10 @@ export function FileUploadZone({ onItemsExtracted }: FileUploadZoneProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            {MOCK_FILE_ITEMS.length} ingrédients extraits
+            {lastCount} articles extraits
           </motion.p>
         )}
+        {error && <p className="mt-3 text-xs text-amber-300">{error}</p>}
       </motion.div>
     </div>
   );
