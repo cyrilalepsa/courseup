@@ -113,10 +113,6 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setLiveCoordinates(locationPrefs.coordinates);
-  }, [locationPrefs.coordinates]);
-
-  useEffect(() => {
     if (!isHydrated || !navigator.geolocation) return undefined;
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -134,8 +130,12 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   const selysGeofenceActive = useMemo(() => {
     const selysStore = selectedStores.selys;
     if (!selysStore?.geofenceRadiusM) return false;
-    return isInsideGeofence(liveCoordinates, selysStore);
-  }, [liveCoordinates, selectedStores.selys]);
+    const coords =
+      locationPrefs.locationSource === "gps"
+        ? liveCoordinates
+        : locationPrefs.coordinates;
+    return isInsideGeofence(coords, selysStore);
+  }, [liveCoordinates, locationPrefs, selectedStores.selys]);
 
   const setItems = useCallback((next: IngestedItem[]) => {
     setItemsState(next);
