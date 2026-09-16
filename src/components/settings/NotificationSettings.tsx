@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, Sparkles, X } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCourseUp } from "@/context/CourseUpContext";
 import {
   getNotificationPermission,
   requestNotificationPermission,
   sendDemoNotification,
 } from "@/services/notificationService";
+import { getActiveBridges, subscribeBridgeRegistry } from "@/services/bridgeRegistryService";
 
 interface NotificationSettingsProps {
   open: boolean;
@@ -57,6 +58,18 @@ export function NotificationSettings({
     refreshNotificationPermission,
   } = useCourseUp();
 
+  const [cockpitBridgeCount, setCockpitBridgeCount] = useState(
+    () => getActiveBridges().filter((b) => b.source === "cockpit").length,
+  );
+
+  useEffect(
+    () =>
+      subscribeBridgeRegistry((bridges) => {
+        setCockpitBridgeCount(bridges.filter((b) => b.source === "cockpit").length);
+      }),
+    [],
+  );
+
   const requestAccess = useCallback(async () => {
     await requestNotificationPermission();
     refreshNotificationPermission();
@@ -85,6 +98,12 @@ export function NotificationSettings({
           <p className="mt-1 text-[11px] text-slate-500">
             Permission :{" "}
             <span className="font-semibold text-slate-800">{notificationPermission}</span>
+            {cockpitBridgeCount > 0 && (
+              <>
+                {" "}
+                · {cockpitBridgeCount} pont Cockpit actif{cockpitBridgeCount > 1 ? "s" : ""}
+              </>
+            )}
           </p>
         </div>
       </div>

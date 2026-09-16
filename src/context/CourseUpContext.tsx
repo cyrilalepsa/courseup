@@ -39,6 +39,10 @@ import {
   notifyProximityAlert,
   requestNotificationPermission,
 } from "@/services/notificationService";
+import {
+  COCKPIT_BRIDGE_EVENT,
+  getCockpitNotificationDefaults,
+} from "@/services/bridgeRegistryService";
 import type { DispatchOrder } from "@/types/dispatch";
 import type { IngestedItem } from "@/types/ingestion";
 import {
@@ -133,6 +137,28 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     notificationPrefsRef.current = notificationPrefs;
   }, [notificationPrefs]);
 
+  useEffect(() => {
+    const onCockpitConfig = (event: Event) => {
+      const detail = (event as CustomEvent<{ notificationDefaults?: Partial<NotificationPreferences> }>)
+        .detail;
+      if (!detail?.notificationDefaults) return;
+      setNotificationPrefsState((prev) => {
+        const next = {
+          ...prev,
+          ...detail.notificationDefaults,
+          proximityCooldown: {
+            ...prev.proximityCooldown,
+            ...(detail.notificationDefaults?.proximityCooldown ?? {}),
+          },
+        };
+        void saveNotificationPrefs(next);
+        return next;
+      });
+    };
+    window.addEventListener(COCKPIT_BRIDGE_EVENT, onCockpitConfig);
+    return () => window.removeEventListener(COCKPIT_BRIDGE_EVENT, onCockpitConfig);
+  }, []);
+
   const persistLocation = useCallback((prefs: LocationPreferences) => {
     const computed = withNearbyStores(prefs);
     setLocationPrefs(computed.prefs);
@@ -158,6 +184,21 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
         lastTierIndex: Math.max(state.notificationPrefs.lastTierIndex, tierIndex),
       });
       setNotificationPermission(getNotificationPermission());
+      const cockpitDefaults = getCockpitNotificationDefaults();
+      if (cockpitDefaults) {
+        setNotificationPrefsState((prev) => ({
+          ...prev,
+          ...cockpitDefaults,
+          lastTierIndex: Math.max(
+            prev.lastTierIndex,
+            cockpitDefaults.lastTierIndex ?? prev.lastTierIndex,
+          ),
+          proximityCooldown: {
+            ...prev.proximityCooldown,
+            ...(cockpitDefaults.proximityCooldown ?? {}),
+          },
+        }));
+      }
       setIsHydrated(true);
     });
     return () => {
