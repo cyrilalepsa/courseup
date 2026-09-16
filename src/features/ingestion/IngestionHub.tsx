@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { FileUp, Link2, Type } from "lucide-react";
 import { useCallback, useState } from "react";
+import { useCourseUp } from "@/context/CourseUpContext";
 import type { IngestedItem, IngestionSource } from "@/types/ingestion";
 import { EcosystemBridge } from "./EcosystemBridge";
 import { FileUploadZone } from "./FileUploadZone";
@@ -20,8 +21,8 @@ interface IngestionHubProps {
 }
 
 export function IngestionHub({ onOptimize }: IngestionHubProps) {
+  const { items, setItems } = useCourseUp();
   const [activeTab, setActiveTab] = useState<TabId>("file");
-  const [items, setItems] = useState<IngestedItem[]>([]);
   const [textValue, setTextValue] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -125,7 +126,9 @@ export function IngestionHub({ onOptimize }: IngestionHubProps) {
       <ParsedItemsPreview
         items={items}
         onChange={setItems}
-        onOptimize={() => onOptimize(items)}
+        onOptimize={() => {
+          if (items.length > 0) onOptimize();
+        }}
       />
     </section>
   );
