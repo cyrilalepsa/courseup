@@ -18,13 +18,15 @@ npm run build    # build production (+ service worker)
 npm run start    # sert dist/ (Railway : PORT injecté)
 ```
 
-## Déploiement Railway
+## Déploiement Railway (Railpack)
 
-- **Build Command** : `npm run build`
-- **Start Command** : `npx serve -s dist -l $PORT` (ou `npm run start`)
-- Fichier `nixpacks.toml` à la racine pour Railpack/Nixpacks
+Railway utilise **Railpack** (plus Nixpacks). Config : `railpack.json` à la racine.
 
-Après merge, lance un **Redeploy** depuis Settings → Build & Deploy si besoin.
+- **Build Command** (auto ou explicite) : `npm run build`
+- **Start Command** : `npm run start` (équiv. `serve -s dist -l $PORT`)
+- Node **22** recommandé (défini dans `railpack.json`)
+
+Dans **Settings → Build & Deploy**, puis **Redeploy** après merge.
 
 ## Structure
 
