@@ -15,8 +15,16 @@ PWA **CourseUp** (NeriaCorp) — Sprint 1, Étape 1 : ingestion multi-format.
 npm install
 npm run dev      # développement
 npm run build    # build production (+ service worker)
-npm run start    # preview (Railway / hébergement statique après build)
+npm run start    # sert dist/ (Railway : PORT injecté)
 ```
+
+## Déploiement Railway
+
+- **Build Command** : `npm run build`
+- **Start Command** : `npx serve -s dist -l $PORT` (ou `npm run start`)
+- Fichier `nixpacks.toml` à la racine pour Railpack/Nixpacks
+
+Après merge, lance un **Redeploy** depuis Settings → Build & Deploy si besoin.
 
 ## Structure
 
