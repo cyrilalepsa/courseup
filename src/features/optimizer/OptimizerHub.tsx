@@ -6,9 +6,10 @@ import {
   Navigation,
   ShoppingCart,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { StoreSelector } from "@/components/store/StoreSelector";
 import { useCourseUp } from "@/context/CourseUpContext";
+import { getDiscountSuggestions } from "@/services/discountService";
 import type { IngestedItem } from "@/types/ingestion";
 import type { OptimizationMode, OptimizedBasket } from "@/types/optimizer";
 import { CartOptimizer } from "./CartOptimizer";
@@ -22,12 +23,26 @@ interface OptimizerHubProps {
 }
 
 export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHubProps) {
-  const { selectedStores } = useCourseUp();
+  const { selectedStores, setItems } = useCourseUp();
   const [mode, setMode] = useState<OptimizationMode>("multi-drive");
+  const [discountAppliedItemIds, setDiscountAppliedItemIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  const discountSavingsTotal = useMemo(() => {
+    const summary = getDiscountSuggestions(items);
+    return summary.suggestions
+      .filter((s) => discountAppliedItemIds.has(s.itemId))
+      .reduce((n, s) => n + s.savingsAmount, 0);
+  }, [items, discountAppliedItemIds]);
 
   const optimizeOptions: OptimizeCartOptions = useMemo(
-    () => ({ selectedStores }),
-    [selectedStores],
+    () => ({
+      selectedStores,
+      discountAppliedItemIds: [...discountAppliedItemIds],
+      discountSavingsTotal: Number(discountSavingsTotal.toFixed(2)),
+    }),
+    [selectedStores, discountAppliedItemIds, discountSavingsTotal],
   );
 
   const basket = useMemo(
@@ -36,6 +51,13 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
   );
 
   const totalLines = basket.splits.reduce((n, s) => n + s.items.length, 0);
+
+  const handleItemsChange = useCallback(
+    (next: IngestedItem[]) => {
+      setItems(next);
+    },
+    [setItems],
+  );
 
   return (
     <motion.div
@@ -94,6 +116,9 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
         onModeChange={setMode}
         basket={basket}
         optimizeOptions={optimizeOptions}
+        onItemsChange={handleItemsChange}
+        discountAppliedItemIds={discountAppliedItemIds}
+        onDiscountAppliedChange={setDiscountAppliedItemIds}
       />
 
       <N2OCalculator gain={basket.n2o} />

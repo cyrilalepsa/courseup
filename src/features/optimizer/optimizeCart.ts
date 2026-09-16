@@ -8,6 +8,12 @@ import type {
   PartnerStoreId,
   StoreSplit,
 } from "@/types/optimizer";
+import {
+  DEFAULT_DISCOUNT_TRIP_KM_ONE_WAY,
+  findDiscountEntryForItem,
+  isDiscountStopWorthwhile,
+  lineTotalAtDiscountStore,
+} from "@/services/discountService";
 import { computeMultiDriveTripKm } from "@/services/locationService";
 import type { DriveStore, StoreBrand } from "@/types/store";
 
@@ -40,6 +46,24 @@ export const PARTNER_DRIVES: PartnerDrive[] = [
     accentClass: "from-red-500/20 to-orange-400/10",
   },
   {
+    id: "lidl",
+    name: "Lidl",
+    type: "drive",
+    affiliationRate: 0.02,
+    priceIndex: 0.88,
+    pickupMinutes: 28,
+    accentClass: "from-yellow-500/30 to-blue-800/20",
+  },
+  {
+    id: "aldi",
+    name: "Aldi",
+    type: "drive",
+    affiliationRate: 0.025,
+    priceIndex: 0.86,
+    pickupMinutes: 26,
+    accentClass: "from-sky-700/25 to-orange-500/15",
+  },
+  {
     id: "selys-local",
     name: "Selys — Artisans locaux",
     type: "local",
@@ -50,11 +74,18 @@ export const PARTNER_DRIVES: PartnerDrive[] = [
   },
 ];
 
-const DRIVES = PARTNER_DRIVES.filter((s) => s.type === "drive");
+const DRIVES = PARTNER_DRIVES.filter(
+  (s) => s.type === "drive" && s.id !== "lidl" && s.id !== "aldi",
+);
+const DISCOUNT_DRIVES = PARTNER_DRIVES.filter((s) => s.id === "lidl" || s.id === "aldi");
 const SELYS = PARTNER_DRIVES.find((s) => s.id === "selys-local")!;
 
 export interface OptimizeCartOptions {
   selectedStores?: Partial<Record<StoreBrand, DriveStore>>;
+  /** Articles pour lesquels l'utilisateur a accepté l'équivalent discount. */
+  discountAppliedItemIds?: string[];
+  /** Somme des économies € liées aux remplacements discount (bonus N2O). */
+  discountSavingsTotal?: number;
 }
 
 function partnerBrand(partnerId: PartnerStoreId): StoreBrand | null {
@@ -65,6 +96,9 @@ function partnerBrand(partnerId: PartnerStoreId): StoreBrand | null {
       return "leclerc";
     case "auchan":
       return "auchan";
+    case "lidl":
+    case "aldi":
+      return null;
     case "selys-local":
       return "selys";
     default:
@@ -72,12 +106,131 @@ function partnerBrand(partnerId: PartnerStoreId): StoreBrand | null {
   }
 }
 
+function discountDriveById(id: PartnerStoreId): PartnerDrive | undefined {
+  return DISCOUNT_DRIVES.find((d) => d.id === id);
+}
+
+function appliedDiscountIds(options?: OptimizeCartOptions): Set<string> {
+  return new Set(options?.discountAppliedItemIds ?? []);
+}
+
+function discountLineForItem(
+  item: IngestedItem,
+  options?: OptimizeCartOptions,
+): { store: PartnerDrive; line: AssignedLineItem } | null {
+  const entry = findDiscountEntryForItem(item);
+  if (!entry) return null;
+
+  const applied = appliedDiscountIds(options);
+  const nameMatchesDiscount =
+    item.name.toLowerCase().trim() === entry.discountLabel.toLowerCase().trim();
+  if (!applied.has(item.id) && !nameMatchesDiscount) return null;
+
+  const store = discountDriveById(entry.store);
+  if (!store) return null;
+
+  const unitPrice = entry.discountUnitPrice;
+  const lineTotal = lineTotalAtDiscountStore(item, entry);
+  return {
+    store,
+    line: {
+      itemId: item.id,
+      name: entry.discountLabel,
+      quantity: item.quantity,
+      unit: item.unit,
+      unitPrice,
+      lineTotal,
+    },
+  };
+}
+
+function cheapestClassicLine(item: IngestedItem): {
+  store: PartnerDrive;
+  line: AssignedLineItem;
+} {
+  let bestLine = lineForStore(item, DRIVES[0]);
+  let bestStore = DRIVES[0];
+  for (const store of DRIVES) {
+    const line = lineForStore(item, store);
+    if (line.lineTotal < bestLine.lineTotal) {
+      bestLine = line;
+      bestStore = store;
+    }
+  }
+  return { store: bestStore, line: bestLine };
+}
+
+function mergeSplitIntoTarget(target: StoreSplit, donor: StoreSplit): void {
+  target.items.push(...donor.items);
+  target.subtotal = Number((target.subtotal + donor.subtotal).toFixed(2));
+  target.affiliationCashback = Number(
+    (target.subtotal * target.store.affiliationRate).toFixed(2),
+  );
+}
+
+function pruneUnworthyDiscountStops(
+  splits: StoreSplit[],
+  items: IngestedItem[],
+): StoreSplit[] {
+  const itemById = new Map(items.map((i) => [i.id, i]));
+  const next = [...splits];
+  const discountIds = new Set<PartnerStoreId>(["lidl", "aldi"]);
+
+  for (const discountId of discountIds) {
+    const idx = next.findIndex((s) => s.store.id === discountId);
+    if (idx < 0) continue;
+
+    const split = next[idx];
+    let productSavings = 0;
+    for (const line of split.items) {
+      const item =
+        itemById.get(line.itemId) ??
+        ({
+          id: line.itemId,
+          name: line.name,
+          quantity: line.quantity,
+          unit: line.unit,
+          category: "épicerie",
+          confidenceScore: 1,
+          source: "text",
+        } satisfies IngestedItem);
+      const entry = findDiscountEntryForItem(item);
+      if (!entry) continue;
+      const classic = cheapestClassicLine(item);
+      productSavings += classic.line.lineTotal - line.lineTotal;
+    }
+    productSavings = Number(productSavings.toFixed(2));
+
+    const roundTrip =
+      (split.tripDistanceKm ?? DEFAULT_DISCOUNT_TRIP_KM_ONE_WAY) * 2;
+
+    if (!isDiscountStopWorthwhile(productSavings, roundTrip)) {
+      const fallback =
+        next.find((s) => DRIVES.some((d) => d.id === s.store.id)) ?? next[0];
+      if (fallback && fallback !== split) {
+        mergeSplitIntoTarget(fallback, split);
+        next.splice(idx, 1);
+      }
+    }
+  }
+
+  return next;
+}
+
 function enrichSplits(
   splits: StoreSplit[],
   options?: OptimizeCartOptions,
 ): StoreSplit[] {
-  if (!options?.selectedStores) return splits;
   return splits.map((split) => {
+    if (split.store.id === "lidl" || split.store.id === "aldi") {
+      return {
+        ...split,
+        displayName: split.store.name,
+        tripDistanceKm: split.tripDistanceKm ?? DEFAULT_DISCOUNT_TRIP_KM_ONE_WAY,
+      };
+    }
+
+    if (!options?.selectedStores) return split;
     const brand = partnerBrand(split.store.id);
     const physical = brand ? options.selectedStores?.[brand] : undefined;
     if (!physical) return split;
@@ -149,11 +302,15 @@ function computeN2O(
   mode: OptimizationMode,
   optimizedTotal: number,
   splits: StoreSplit[],
+  discountSavingsTotal = 0,
 ): N2OGain {
   const affiliationSum = splits.reduce((s, sp) => s + sp.affiliationCashback, 0);
   const modeBonus =
     mode === "monopoly" ? 40 : mode === "multi-drive" ? 120 : 95;
-  const pointsEarned = Math.round(optimizedTotal * 3.2 + affiliationSum * 45 + modeBonus);
+  const discountBonus = Math.round(discountSavingsTotal * 6);
+  const pointsEarned = Math.round(
+    optimizedTotal * 3.2 + affiliationSum * 45 + modeBonus + discountBonus,
+  );
   const conversionProgress = Math.min(1, pointsEarned / 600);
   const tierLabel =
     conversionProgress >= 0.85
@@ -169,11 +326,13 @@ function computeN2O(
     tierLabel,
     cashbackEuro: Number(affiliationSum.toFixed(2)),
     bonusLabel:
-      mode === "multi-drive"
-        ? "Bonus split multi-enseignes"
-        : mode === "hybrid-selys"
-          ? "Bonus circuit court Selys"
-          : "Bonus monopole express",
+      discountSavingsTotal > 0
+        ? `Bonus discount PGC (+${discountBonus} N2O · ${discountSavingsTotal.toFixed(2)} € économisés)`
+        : mode === "multi-drive"
+          ? "Bonus split multi-enseignes"
+          : mode === "hybrid-selys"
+            ? "Bonus circuit court Selys"
+            : "Bonus monopole express",
   };
 }
 
@@ -182,6 +341,7 @@ function summarize(
   splits: StoreSplit[],
   items: IngestedItem[],
   timeScoreLabel: string,
+  options?: OptimizeCartOptions,
 ): OptimizedBasket {
   const optimizedTotal = Number(
     splits.reduce((s, sp) => s + sp.subtotal, 0).toFixed(2),
@@ -194,7 +354,12 @@ function summarize(
       ? Number(Math.min(25, Math.max(rawPercent, savingsAmount > 0 ? 12 : 0)).toFixed(1))
       : Number(rawPercent.toFixed(1));
 
-  const n2o = computeN2O(mode, optimizedTotal, splits);
+  const n2o = computeN2O(
+    mode,
+    optimizedTotal,
+    splits,
+    options?.discountSavingsTotal ?? 0,
+  );
   const totalTripDistanceKm = computeMultiDriveTripKm(splits);
 
   return {
@@ -223,12 +388,13 @@ function finalizeBasket(
   options?: OptimizeCartOptions,
 ): OptimizedBasket {
   const enriched = enrichSplits(splits, options);
-  const tripKm = computeMultiDriveTripKm(enriched);
+  const pruned = pruneUnworthyDiscountStops(enriched, items);
+  const tripKm = computeMultiDriveTripKm(pruned);
   const label =
     tripKm > 0
       ? `${timeScoreLabel} · ~${tripKm} km trajets`
       : timeScoreLabel;
-  return summarize(mode, enriched, items, label);
+  return summarize(mode, pruned, items, label, options);
 }
 
 function optimizeMonopoly(
@@ -266,6 +432,14 @@ function optimizeMultiDrive(
   const byStore = new Map<PartnerStoreId, AssignedLineItem[]>();
 
   for (const item of items) {
+    const discountAssignment = discountLineForItem(item, options);
+    if (discountAssignment) {
+      const bucket = byStore.get(discountAssignment.store.id) ?? [];
+      bucket.push(discountAssignment.line);
+      byStore.set(discountAssignment.store.id, bucket);
+      continue;
+    }
+
     let bestLine = lineForStore(item, DRIVES[0]);
     let bestStore = DRIVES[0];
 
@@ -332,6 +506,14 @@ function optimizeHybridSelys(
   const driveBuckets = new Map<PartnerStoreId, AssignedLineItem[]>();
 
   for (const item of remaining) {
+    const discountAssignment = discountLineForItem(item, options);
+    if (discountAssignment) {
+      const bucket = driveBuckets.get(discountAssignment.store.id) ?? [];
+      bucket.push(discountAssignment.line);
+      driveBuckets.set(discountAssignment.store.id, bucket);
+      continue;
+    }
+
     let best = lineForStore(item, DRIVES[0]);
     let bestStore = DRIVES[0];
     for (const store of DRIVES) {
@@ -370,7 +552,7 @@ export function optimizeCart(
   options?: OptimizeCartOptions,
 ): OptimizedBasket {
   if (items.length === 0) {
-    return summarize(mode, [], items, "—");
+    return summarize(mode, [], items, "—", options);
   }
 
   switch (mode) {
