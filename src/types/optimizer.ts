@@ -6,6 +6,8 @@ export type PartnerStoreId =
   | "carrefour"
   | "leclerc"
   | "auchan"
+  | "lidl"
+  | "aldi"
   | "selys-local";
 
 export interface PartnerDrive {

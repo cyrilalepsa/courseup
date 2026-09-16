@@ -1,8 +1,14 @@
 import { motion } from "framer-motion";
 import { Clock, Layers, Leaf, Store, TrendingDown } from "lucide-react";
 import { useMemo } from "react";
+import type { DiscountSuggestion } from "@/types/discount";
+import {
+  applySuggestionToItem,
+  getDiscountSuggestions,
+} from "@/services/discountService";
 import type { IngestedItem } from "@/types/ingestion";
 import type { OptimizationMode, OptimizedBasket } from "@/types/optimizer";
+import { DiscountSuggestionsWidget } from "./DiscountSuggestionsWidget";
 import { MODE_META, optimizeCart, type OptimizeCartOptions } from "./optimizeCart";
 
 const MODE_ICONS: Record<OptimizationMode, typeof Store> = {
@@ -17,6 +23,9 @@ interface CartOptimizerProps {
   onModeChange: (mode: OptimizationMode) => void;
   basket: OptimizedBasket;
   optimizeOptions?: OptimizeCartOptions;
+  onItemsChange?: (items: IngestedItem[]) => void;
+  discountAppliedItemIds: Set<string>;
+  onDiscountAppliedChange: (ids: Set<string>) => void;
 }
 
 export function CartOptimizer({
@@ -25,7 +34,20 @@ export function CartOptimizer({
   onModeChange,
   basket,
   optimizeOptions,
+  onItemsChange,
+  discountAppliedItemIds,
+  onDiscountAppliedChange,
 }: CartOptimizerProps) {
+  const discountSummary = useMemo(() => getDiscountSuggestions(items), [items]);
+
+  const appliedSavings = useMemo(() => {
+    return discountSummary.suggestions
+      .filter((s) => discountAppliedItemIds.has(s.itemId))
+      .reduce((n, s) => n + s.savingsAmount, 0);
+  }, [discountSummary.suggestions, discountAppliedItemIds]);
+
+  const discountN2OBonus = Math.round(appliedSavings * 6);
+
   const modes = useMemo(
     () =>
       (Object.keys(MODE_META) as OptimizationMode[]).map((id) => ({
@@ -36,8 +58,45 @@ export function CartOptimizer({
     [items, optimizeOptions],
   );
 
+  const applySuggestion = (suggestion: DiscountSuggestion) => {
+    if (!onItemsChange) return;
+    const nextItems = items.map((item) =>
+      item.id === suggestion.itemId ? applySuggestionToItem(item, suggestion) : item,
+    );
+    onItemsChange(nextItems);
+    const nextIds = new Set(discountAppliedItemIds);
+    nextIds.add(suggestion.itemId);
+    onDiscountAppliedChange(nextIds);
+  };
+
+  const applyAll = () => {
+    if (!onItemsChange) return;
+    const pending = discountSummary.suggestions.filter(
+      (s) => !discountAppliedItemIds.has(s.itemId),
+    );
+    const byId = new Map(pending.map((s) => [s.itemId, s]));
+    const nextItems = items.map((item) => {
+      const suggestion = byId.get(item.id);
+      return suggestion ? applySuggestionToItem(item, suggestion) : item;
+    });
+    onItemsChange(nextItems);
+    const nextIds = new Set(discountAppliedItemIds);
+    for (const s of pending) nextIds.add(s.itemId);
+    onDiscountAppliedChange(nextIds);
+  };
+
   return (
     <section className="space-y-4">
+      <DiscountSuggestionsWidget
+        suggestions={discountSummary.suggestions}
+        totalPotentialSavings={discountSummary.totalPotentialSavings}
+        replaceableCount={discountSummary.replaceableCount}
+        appliedItemIds={discountAppliedItemIds}
+        onApplyOne={applySuggestion}
+        onApplyAll={applyAll}
+        discountN2OBonus={discountN2OBonus}
+      />
+
       <div>
         <h2 className="text-base font-semibold text-slate-100">Algorithme de dispatch</h2>
         <p className="text-xs text-slate-300">
@@ -98,6 +157,13 @@ export function CartOptimizer({
             <p className="text-lg font-bold text-slate-900">
               {basket.savings.savingsAmount.toFixed(2)} € économisés
             </p>
+            {appliedSavings > 0 && (
+              <p className="mt-1">
+                <span className="neria-badge-savings">
+                  +{appliedSavings.toFixed(2)} € via Lidl/Aldi
+                </span>
+              </p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-600">Panier optimisé</p>

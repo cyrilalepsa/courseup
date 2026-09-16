@@ -53,6 +53,10 @@ body {
     @apply inline-flex items-center gap-1 rounded-full border border-cyan-400/40 bg-[linear-gradient(135deg,rgba(34,211,238,0.2)_0%,rgba(168,85,247,0.25)_100%)] px-2.5 py-1 text-[10px] font-semibold text-slate-900 shadow-sm;
   }
 
+  .neria-badge-savings {
+    @apply inline-flex items-center gap-1 rounded-full border border-emerald-400/60 bg-[linear-gradient(135deg,rgba(52,211,153,0.25)_0%,rgba(16,185,129,0.15)_100%)] px-2.5 py-1 text-[10px] font-bold text-emerald-900 shadow-sm shadow-emerald-500/25;
+  }
+
   .neria-cta-primary {
     @apply rounded-xl bg-blue-600 font-bold text-white shadow-lg shadow-black/20 transition hover:bg-blue-700;
   }
