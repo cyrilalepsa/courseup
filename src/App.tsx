@@ -2,15 +2,42 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Header } from "@/components/layout/Header";
+import { DispatchHub } from "@/features/dispatch/DispatchHub";
 import { IngestionHub } from "@/features/ingestion/IngestionHub";
 import { OptimizerHub } from "@/features/optimizer/OptimizerHub";
 import type { IngestedItem } from "@/types/ingestion";
+import type { OptimizedBasket } from "@/types/optimizer";
 
-type AppStep = "ingestion" | "optimizer";
+type AppStep = "ingestion" | "optimizer" | "dispatch";
+
+const STEP_COPY: Record<
+  AppStep,
+  { step: string; title: string; description: string }
+> = {
+  ingestion: {
+    step: "Étape 1",
+    title: "CourseUp v1.0 — Ingestion Intelligente",
+    description:
+      "Importez tickets, texte ou listes depuis l'écosystème NeriaCorp. Validez vos articles avant l'optimisation multi-enseignes N2O.",
+  },
+  optimizer: {
+    step: "Étape 2",
+    title: "CourseUp v1.0 — Optimiseur Multi-Enseignes N2O",
+    description:
+      "Dispatch algorithmique Carrefour, Leclerc, Auchan et circuits Selys — cashback affiliation et conversion N2O en temps réel.",
+  },
+  dispatch: {
+    step: "Étape 3",
+    title: "CourseUp v1.0 — Hub de Dispatch",
+    description:
+      "Export des paniers vers les drives affiliés, génération des bons Selys et crédit N2O — suivez chaque checkout jusqu'à la validation.",
+  },
+};
 
 export default function App() {
   const [step, setStep] = useState<AppStep>("ingestion");
   const [validatedItems, setValidatedItems] = useState<IngestedItem[]>([]);
+  const [optimizedBasket, setOptimizedBasket] = useState<OptimizedBasket | null>(null);
 
   const handleOptimize = useCallback((items: IngestedItem[]) => {
     setValidatedItems(items);
@@ -18,10 +45,30 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  const handleProceedDispatch = useCallback((basket: OptimizedBasket) => {
+    setOptimizedBasket(basket);
+    setStep("dispatch");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   const handleBackToIngestion = useCallback(() => {
     setStep("ingestion");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  const handleBackToOptimizer = useCallback(() => {
+    setStep("optimizer");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const handleNewOrder = useCallback(() => {
+    setValidatedItems([]);
+    setOptimizedBasket(null);
+    setStep("ingestion");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const copy = STEP_COPY[step];
 
   return (
     <div className="flex min-h-dvh flex-col bg-navy">
@@ -46,24 +93,16 @@ export default function App() {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-emerald-accent/90">
-                Sprint 1 · {step === "ingestion" ? "Étape 1" : "Étape 2"}
+                Sprint 1 · {copy.step}
               </p>
-              <h2 className="mt-0.5 text-lg font-bold text-white sm:text-xl">
-                {step === "ingestion"
-                  ? "CourseUp v1.0 — Ingestion Intelligente"
-                  : "CourseUp v1.0 — Optimiseur Multi-Enseignes N2O"}
-              </h2>
-              <p className="mt-1 text-sm leading-relaxed text-slate-400">
-                {step === "ingestion"
-                  ? "Importez tickets, texte ou listes depuis l'écosystème NeriaCorp. Validez vos articles avant l'optimisation multi-enseignes N2O."
-                  : "Dispatch algorithmique Carrefour, Leclerc, Auchan et circuits Selys — cashback affiliation et conversion N2O en temps réel."}
-              </p>
+              <h2 className="mt-0.5 text-lg font-bold text-white sm:text-xl">{copy.title}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-slate-400">{copy.description}</p>
             </div>
           </div>
         </motion.div>
 
         <AnimatePresence mode="wait">
-          {step === "ingestion" ? (
+          {step === "ingestion" && (
             <motion.div
               key="ingestion"
               initial={{ opacity: 0, y: 12 }}
@@ -73,7 +112,8 @@ export default function App() {
             >
               <IngestionHub onOptimize={handleOptimize} />
             </motion.div>
-          ) : (
+          )}
+          {step === "optimizer" && (
             <motion.div
               key="optimizer"
               initial={{ opacity: 0, y: 12 }}
@@ -81,7 +121,26 @@ export default function App() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3 }}
             >
-              <OptimizerHub items={validatedItems} onBack={handleBackToIngestion} />
+              <OptimizerHub
+                items={validatedItems}
+                onBack={handleBackToIngestion}
+                onProceedToDispatch={handleProceedDispatch}
+              />
+            </motion.div>
+          )}
+          {step === "dispatch" && optimizedBasket && (
+            <motion.div
+              key="dispatch"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3 }}
+            >
+              <DispatchHub
+                basket={optimizedBasket}
+                onBack={handleBackToOptimizer}
+                onNewOrder={handleNewOrder}
+              />
             </motion.div>
           )}
         </AnimatePresence>
