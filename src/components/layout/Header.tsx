@@ -2,11 +2,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   CloudOff,
   Download,
+  MapPin,
   ShoppingBag,
   Wifi,
   WifiOff,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { StoreSelector } from "@/components/store/StoreSelector";
 import { useCourseUp } from "@/context/CourseUpContext";
 
 type ConnectionStatus = "online" | "offline";
@@ -21,7 +23,12 @@ function detectStandalone(): boolean {
 }
 
 export function Header() {
-  const { n2oBalance } = useCourseUp();
+  const {
+    n2oBalance,
+    locationPrefs,
+    storeSelectorOpen,
+    setStoreSelectorOpen,
+  } = useCourseUp();
   const [connection, setConnection] = useState<ConnectionStatus>(
     typeof navigator !== "undefined" && navigator.onLine ? "online" : "offline",
   );
@@ -88,6 +95,14 @@ export function Header() {
 
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setStoreSelectorOpen(true)}
+                className="hidden items-center gap-1 rounded-full border border-border bg-card/70 px-2 py-1 text-[10px] font-medium text-slate-300 backdrop-blur-md transition hover:border-emerald-500/40 sm:inline-flex"
+              >
+                <MapPin className="h-3 w-3 text-emerald-accent" />
+                {locationPrefs.postalCode} · {locationPrefs.searchRadiusKm} km
+              </button>
               <motion.span
                 className={`inline-flex items-center gap-1 rounded-full border border-border bg-card/70 px-2 py-1 text-[11px] font-medium backdrop-blur-md ${statusColor}`}
                 layout
@@ -141,6 +156,12 @@ export function Header() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <StoreSelector
+        variant="modal"
+        open={storeSelectorOpen}
+        onClose={() => setStoreSelectorOpen(false)}
+      />
     </>
   );
 }

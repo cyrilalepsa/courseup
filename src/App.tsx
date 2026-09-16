@@ -22,11 +22,11 @@ const STEP_COPY: Record<
       "Importez et validez vos articles. Le panier est sauvegardé automatiquement en local (offline-first).",
   },
   optimizer: {
-    sprint: "Sprint 1",
+    sprint: "Sprint 2",
     step: "Étape 2",
-    title: "CourseUp v1.0 — Optimiseur Multi-Enseignes N2O",
+    title: "CourseUp — Optimiseur & magasins favoris",
     description:
-      "Dispatch algorithmique Carrefour, Leclerc, Auchan et circuits Selys — cashback affiliation et conversion N2O en temps réel.",
+      "Choisissez vos drives et commerces Selys à proximité. L'optimiseur affiche les points de retrait précis et la distance totale des trajets.",
   },
   dispatch: {
     sprint: "Sprint 1",

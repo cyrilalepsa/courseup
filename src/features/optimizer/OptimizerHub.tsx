@@ -3,14 +3,17 @@ import {
   ArrowLeft,
   ChevronRight,
   MapPin,
+  Navigation,
   ShoppingCart,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { StoreSelector } from "@/components/store/StoreSelector";
+import { useCourseUp } from "@/context/CourseUpContext";
 import type { IngestedItem } from "@/types/ingestion";
 import type { OptimizationMode, OptimizedBasket } from "@/types/optimizer";
 import { CartOptimizer } from "./CartOptimizer";
 import { N2OCalculator } from "./N2OCalculator";
-import { optimizeCart } from "./optimizeCart";
+import { optimizeCart, type OptimizeCartOptions } from "./optimizeCart";
 
 interface OptimizerHubProps {
   items: IngestedItem[];
@@ -19,9 +22,18 @@ interface OptimizerHubProps {
 }
 
 export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHubProps) {
+  const { selectedStores } = useCourseUp();
   const [mode, setMode] = useState<OptimizationMode>("multi-drive");
 
-  const basket = useMemo(() => optimizeCart(items, mode), [items, mode]);
+  const optimizeOptions: OptimizeCartOptions = useMemo(
+    () => ({ selectedStores }),
+    [selectedStores],
+  );
+
+  const basket = useMemo(
+    () => optimizeCart(items, mode, optimizeOptions),
+    [items, mode, optimizeOptions],
+  );
 
   const totalLines = basket.splits.reduce((n, s) => n + s.items.length, 0);
 
@@ -41,6 +53,8 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
         <ArrowLeft className="h-4 w-4" />
         Retour à l&apos;ingestion
       </button>
+
+      <StoreSelector variant="inline" />
 
       <div className="rounded-2xl border border-border bg-card/50 p-4 backdrop-blur-md">
         <div className="flex items-start gap-3">
@@ -64,11 +78,23 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
                     : "Hybride Selys"}
               </span>
             </p>
+            {basket.savings.totalTripDistanceKm > 0 && (
+              <p className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-300/90">
+                <Navigation className="h-3.5 w-3.5" />
+                Distance totale estimée : {basket.savings.totalTripDistanceKm} km (aller-retour)
+              </p>
+            )}
           </div>
         </div>
       </div>
 
-      <CartOptimizer items={items} mode={mode} onModeChange={setMode} basket={basket} />
+      <CartOptimizer
+        items={items}
+        mode={mode}
+        onModeChange={setMode}
+        basket={basket}
+        optimizeOptions={optimizeOptions}
+      />
 
       <N2OCalculator gain={basket.n2o} />
 
@@ -86,11 +112,17 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
               className={`flex flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-r ${split.store.accentClass} px-4 py-3`}
             >
               <div>
-                <p className="text-sm font-bold text-white">{split.store.name}</p>
+                <p className="text-sm font-bold text-white">
+                  {split.displayName ?? split.store.name}
+                </p>
                 <p className="flex items-center gap-1 text-[11px] text-slate-400">
                   <MapPin className="h-3 w-3" />
-                  Retrait ~{split.store.pickupMinutes} min · affiliation{" "}
-                  {Math.round(split.store.affiliationRate * 100)}%
+                  {split.physicalStore
+                    ? `${split.physicalStore.address}, ${split.physicalStore.postalCode}`
+                    : `Retrait ~${split.store.pickupMinutes} min`}
+                  {split.tripDistanceKm != null && split.tripDistanceKm > 0 && (
+                    <span> · {split.tripDistanceKm} km</span>
+                  )}
                 </p>
               </div>
               <div className="text-right">

@@ -30,6 +30,9 @@ export interface StoreSplit {
   items: AssignedLineItem[];
   subtotal: number;
   affiliationCashback: number;
+import type { DriveStore } from "@/types/store";
+  displayName?: string;
+  tripDistanceKm?: number;
 }
 
 export interface SavingsSummary {
@@ -40,6 +43,7 @@ export interface SavingsSummary {
   storeCount: number;
   estimatedTrips: number;
   timeScoreLabel: string;
+  totalTripDistanceKm: number;
 }
 
 export interface N2OGain {

@@ -1,5 +1,9 @@
 import type { DispatchOrder } from "@/types/dispatch";
 import type { IngestedItem } from "@/types/ingestion";
+import {
+  DEFAULT_LOCATION_PREFS,
+  type LocationPreferences,
+} from "@/types/store";
 
 const DB_NAME = "courseup-offline";
 const DB_VERSION = 1;
@@ -11,6 +15,7 @@ export const STORAGE_KEYS = {
   cart: "cart",
   orders: "ordersHistory",
   n2oBalance: "n2oBalance",
+  locationPrefs: "locationPrefs",
 } as const;
 
 export const DEFAULT_N2O_BALANCE = 1250;
@@ -109,19 +114,22 @@ export interface PersistedState {
   cart: IngestedItem[];
   ordersHistory: DispatchOrder[];
   n2oBalance: number;
+  locationPrefs: LocationPreferences;
 }
 
 export async function loadPersistedState(): Promise<PersistedState> {
-  const [cart, ordersHistory, n2oBalance] = await Promise.all([
+  const [cart, ordersHistory, n2oBalance, locationPrefs] = await Promise.all([
     read<IngestedItem[]>(STORAGE_KEYS.cart),
     read<DispatchOrder[]>(STORAGE_KEYS.orders),
     read<number>(STORAGE_KEYS.n2oBalance),
+    read<LocationPreferences>(STORAGE_KEYS.locationPrefs),
   ]);
 
   return {
     cart: cart ?? [],
     ordersHistory: ordersHistory ?? [],
     n2oBalance: typeof n2oBalance === "number" ? n2oBalance : DEFAULT_N2O_BALANCE,
+    locationPrefs: locationPrefs ?? DEFAULT_LOCATION_PREFS,
   };
 }
 
@@ -135,6 +143,10 @@ export async function saveOrdersHistory(orders: DispatchOrder[]): Promise<void> 
 
 export async function saveN2OBalance(balance: number): Promise<void> {
   await write(STORAGE_KEYS.n2oBalance, balance);
+}
+
+export async function saveLocationPrefs(prefs: LocationPreferences): Promise<void> {
+  await write(STORAGE_KEYS.locationPrefs, prefs);
 }
 
 export async function appendOrder(order: DispatchOrder): Promise<void> {
