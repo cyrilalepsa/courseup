@@ -57,6 +57,46 @@ body {
     @apply inline-flex items-center gap-1 rounded-full border border-emerald-400/60 bg-[linear-gradient(135deg,rgba(52,211,153,0.25)_0%,rgba(16,185,129,0.15)_100%)] px-2.5 py-1 text-[10px] font-bold text-emerald-900 shadow-sm shadow-emerald-500/25;
   }
 
+  .neria-badge {
+    @apply inline-flex shrink-0 items-center justify-center rounded-md border font-bold;
+  }
+
+  .neria-badge-sm {
+    @apply h-6 min-w-6 px-1 text-[10px];
+  }
+
+  .neria-badge-md {
+    @apply h-7 min-w-7 px-1.5 text-xs;
+  }
+
+  .neria-badge-tag {
+    @apply rounded-full border border-blue-300/60 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-900;
+  }
+
+  .neria-badge-score-a {
+    @apply border-emerald-700 bg-emerald-600 text-white;
+  }
+
+  .neria-badge-score-b {
+    @apply border-lime-600 bg-lime-500 text-slate-900;
+  }
+
+  .neria-badge-score-c {
+    @apply border-yellow-500 bg-yellow-400 text-slate-900;
+  }
+
+  .neria-badge-score-d {
+    @apply border-orange-600 bg-orange-500 text-white;
+  }
+
+  .neria-badge-score-e {
+    @apply border-red-600 bg-red-500 text-white;
+  }
+
+  .neria-badge-score-f {
+    @apply border-red-900 bg-red-800 text-white;
+  }
+
   .neria-cta-primary {
     @apply rounded-xl bg-blue-600 font-bold text-white shadow-lg shadow-black/20 transition hover:bg-blue-700;
   }

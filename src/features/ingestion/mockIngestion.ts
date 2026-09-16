@@ -1,6 +1,6 @@
 import type { IngestedItem, IngestionItemSource } from "@/types/ingestion";
 import { parseReceiptText } from "@/services/textParserService";
-import { inferQualityScore } from "@/services/qualityScoreService";
+import { inferItemAttributes } from "@/services/itemAttributeService";
 
 let idCounter = 0;
 
@@ -13,6 +13,12 @@ export function createIngestedItem(
   partial: Partial<IngestedItem> & Pick<IngestedItem, "name">,
   source: IngestionItemSource,
 ): IngestedItem {
+  const attributes = {
+    ...inferItemAttributes(partial),
+    ...(partial.attributes ?? {}),
+    tags: [...new Set([...(partial.attributes?.tags ?? inferItemAttributes(partial).tags)])],
+  };
+
   return {
     id: partial.id ?? nextId("item"),
     name: partial.name,
@@ -21,7 +27,8 @@ export function createIngestedItem(
     category: partial.category ?? "épicerie",
     confidenceScore: partial.confidenceScore ?? 0.85,
     source: partial.source ?? source,
-    qualityScore: partial.qualityScore ?? inferQualityScore(partial),
+    attributes,
+    qualityScore: partial.qualityScore ?? attributes.qualityScore,
   };
 }
 

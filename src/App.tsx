@@ -20,14 +20,14 @@ const STEP_COPY: Record<
     step: "Étape 1",
     title: "CourseUp — Ingestion & Nutri-Score",
     description:
-      "Parsez votre liste, visualisez les badges qualité A→F et préparez le parcours macro-rayons en magasin.",
+      "Saisie directe ou import : auto-complétion, tags régimes à la volée, badges Nutri A→F et préparation du parcours macro-rayons.",
   },
   optimizer: {
     sprint: "Sprint 4",
     step: "Étape 1",
     title: "CourseUp — Optimiseur & Mode In-Store",
     description:
-      "Panier optimisé prêt : lancez le mode magasin (macro-rayons, budget réel vs prévisionnel, coche tactile).",
+      "Filtres nutrition configurables, panier optimisé, puis mode magasin (macro-rayons réordonnables, badges et coche tactile).",
   },
   dispatch: {
     sprint: "Sprint 3",

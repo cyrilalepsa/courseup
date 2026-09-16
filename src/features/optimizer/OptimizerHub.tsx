@@ -8,9 +8,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StoreSelector } from "@/components/store/StoreSelector";
-import { QualityScoreBadge } from "@/components/quality/QualityScoreBadge";
 import { useCourseUp } from "@/context/CourseUpContext";
-import { getDiscountSuggestions } from "@/services/discountService";
+import { NutritionFilterPanel } from "@/components/optimizer/NutritionFilterPanel";
+import { applyItemFilters } from "@/services/filterService";
 import type { IngestedItem } from "@/types/ingestion";
 import type { OptimizationMode, OptimizedBasket } from "@/types/optimizer";
 import { CartOptimizer } from "./CartOptimizer";
@@ -37,13 +37,19 @@ export function OptimizerHub({
   const [discountAppliedItemIds, setDiscountAppliedItemIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [nutritionFilterIds, setNutritionFilterIds] = useState<string[]>([]);
+
+  const optimizerItems = useMemo(
+    () => applyItemFilters(items, nutritionFilterIds),
+    [items, nutritionFilterIds],
+  );
 
   const discountSavingsTotal = useMemo(() => {
-    const summary = getDiscountSuggestions(items);
+    const summary = getDiscountSuggestions(optimizerItems);
     return summary.suggestions
       .filter((s) => discountAppliedItemIds.has(s.itemId))
       .reduce((n, s) => n + s.savingsAmount, 0);
-  }, [items, discountAppliedItemIds]);
+  }, [optimizerItems, discountAppliedItemIds]);
 
   const optimizeOptions: OptimizeCartOptions = useMemo(
     () => ({
@@ -55,8 +61,8 @@ export function OptimizerHub({
   );
 
   const basket = useMemo(
-    () => optimizeCart(items, mode, optimizeOptions),
-    [items, mode, optimizeOptions],
+    () => optimizeCart(optimizerItems, mode, optimizeOptions),
+    [optimizerItems, mode, optimizeOptions],
   );
 
   useEffect(() => {
@@ -93,6 +99,19 @@ export function OptimizerHub({
 
       <StoreSelector variant="inline" />
 
+      <NutritionFilterPanel
+        itemsCount={optimizerItems.length}
+        allItems={items}
+        activeFilterIds={nutritionFilterIds}
+        onToggleFilter={(filterId) =>
+          setNutritionFilterIds((prev) =>
+            prev.includes(filterId)
+              ? prev.filter((id) => id !== filterId)
+              : [...prev, filterId],
+          )
+        }
+      />
+
       <div className="neria-card p-4">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
@@ -126,7 +145,7 @@ export function OptimizerHub({
       </div>
 
       <CartOptimizer
-        items={items}
+        items={optimizerItems}
         mode={mode}
         onModeChange={setMode}
         basket={basket}
@@ -179,8 +198,9 @@ export function OptimizerHub({
                   className="flex items-center justify-between gap-2 py-2 text-sm"
                 >
                   <span className="flex min-w-0 items-center gap-2 text-slate-800">
-                    <QualityScoreBadge
-                      score={itemById.get(line.itemId)?.qualityScore}
+                    <ItemBadgeRow
+                      attributes={itemById.get(line.itemId)?.attributes}
+                      qualityScore={itemById.get(line.itemId)?.qualityScore}
                     />
                     <span className="truncate">
                       {line.name}{" "}

@@ -1,3 +1,7 @@
+import type { ItemAttributes, QualityScore } from "@/types/item";
+
+export type { QualityScore } from "@/types/item";
+
 export type IngestionItemSource =
   | "ocr"
   | "file"
@@ -9,8 +13,6 @@ export type IngestionSource = "file" | "text" | "bridge";
 
 export type ItemCategory = "frais" | "épicerie" | "boissons" | "autre";
 
-export type QualityScore = "A" | "B" | "C" | "D" | "E" | "F";
-
 export interface IngestedItem {
   id: string;
   name: string;
@@ -19,6 +21,8 @@ export interface IngestedItem {
   category: ItemCategory;
   confidenceScore: number;
   source: IngestionItemSource;
+  attributes: ItemAttributes;
+  /** Miroir de attributes.qualityScore pour compatibilité ascendante */
   qualityScore?: QualityScore;
 }
 

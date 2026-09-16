@@ -8,7 +8,7 @@ import {
   ShoppingBasket,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { QualityScoreBadge } from "@/components/quality/QualityScoreBadge";
+import { ItemBadgeRow } from "@/components/item/ItemBadgeRow";
 import {
   getAisleOrderForStore,
   defaultAisleOrder,
@@ -17,7 +17,7 @@ import {
   persistAisleOrderForStore,
   resolveInStoreShoppingStoreId,
 } from "@/services/aisleService";
-import { ensureQualityScores } from "@/services/qualityScoreService";
+import { ensureItemAttributesList } from "@/services/itemAttributeService";
 import { loadInStoreSession, saveInStoreSession } from "@/services/storageService";
 import { estimateUnitPrice } from "@/features/optimizer/optimizeCart";
 import type { MacroAisleId } from "@/types/aisle";
@@ -36,12 +36,13 @@ function lineTotal(item: IngestedItem): number {
 
 export function InStoreMode({ items, basket, onClose }: InStoreModeProps) {
   const storeId = resolveInStoreShoppingStoreId(basket);
-  const enrichedItems = useMemo(() => ensureQualityScores(items), [items]);
+  const enrichedItems = useMemo(() => ensureItemAttributesList(items), [items]);
 
   const [aisleOrder, setAisleOrder] = useState<MacroAisleId[]>(() => defaultAisleOrder());
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
   const [deferredIds, setDeferredIds] = useState<Set<string>>(() => new Set());
   const [reorderMode, setReorderMode] = useState(false);
+  const [dragAisleId, setDragAisleId] = useState<MacroAisleId | null>(null);
 
   useEffect(() => {
     void getAisleOrderForStore(storeId).then(setAisleOrder);
@@ -130,6 +131,24 @@ export function InStoreMode({ items, basket, onClose }: InStoreModeProps) {
       });
     },
     [storeId],
+  );
+
+  const dropAisle = useCallback(
+    (targetAisleId: MacroAisleId) => {
+      if (!dragAisleId || dragAisleId === targetAisleId) return;
+      setAisleOrder((prev) => {
+        const next = [...prev];
+        const fromIndex = next.indexOf(dragAisleId);
+        const toIndex = next.indexOf(targetAisleId);
+        if (fromIndex < 0 || toIndex < 0) return prev;
+        next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, dragAisleId);
+        void persistAisleOrderForStore(storeId, next);
+        return next;
+      });
+      setDragAisleId(null);
+    },
+    [dragAisleId, storeId],
   );
 
   const forecastTotal = basket.savings.optimizedTotal;
@@ -225,15 +244,25 @@ export function InStoreMode({ items, basket, onClose }: InStoreModeProps) {
                 : "border border-white/15 text-slate-200"
             }`}
           >
-            {reorderMode ? "Fin réorganisation" : "Réordonner rayons"}
+            {reorderMode ? "Fin réorganisation" : "Glisser-déposer rayons"}
           </button>
         </div>
 
         <div className="space-y-4">
           {groups.map((group) => (
-            <section key={group.aisleId} className="neria-card overflow-hidden">
+            <section
+              key={group.aisleId}
+              className={`neria-card overflow-hidden ${dragAisleId === group.aisleId ? "ring-2 ring-cyan-400" : ""}`}
+              draggable={reorderMode}
+              onDragStart={() => reorderMode && setDragAisleId(group.aisleId)}
+              onDragOver={(e) => reorderMode && e.preventDefault()}
+              onDrop={() => reorderMode && dropAisle(group.aisleId)}
+            >
               <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2">
-                <h3 className="text-sm font-bold text-slate-900">{group.label}</h3>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {reorderMode && <span className="mr-2 cursor-grab text-slate-400">⠿</span>}
+                  {group.label}
+                </h3>
                 {reorderMode && (
                   <div className="flex gap-1">
                     <button
@@ -284,13 +313,15 @@ export function InStoreMode({ items, basket, onClose }: InStoreModeProps) {
                             <Check className="h-4 w-4" />
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="flex items-center gap-2">
-                              <QualityScoreBadge score={item.qualityScore} />
-                              <span className="truncate text-sm font-semibold text-slate-900">
-                                {item.name}
-                              </span>
+                            <span className="block truncate text-sm font-semibold text-slate-900">
+                              {item.name}
                             </span>
-                            <span className="text-xs text-slate-600">
+                            <ItemBadgeRow
+                              attributes={item.attributes}
+                              qualityScore={item.qualityScore}
+                              className="mt-1"
+                            />
+                            <span className="mt-1 block text-xs text-slate-600">
                               × {item.quantity} {item.unit} · ~{lineTotal(item).toFixed(2)} €
                             </span>
                           </span>
@@ -324,9 +355,12 @@ export function InStoreMode({ items, basket, onClose }: InStoreModeProps) {
                   key={item.id}
                   className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"
                 >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <QualityScoreBadge score={item.qualityScore} />
-                    <span className="truncate text-sm text-slate-800">{item.name}</span>
+                  <div className="min-w-0 flex-1">
+                    <ItemBadgeRow
+                      attributes={item.attributes}
+                      qualityScore={item.qualityScore}
+                    />
+                    <span className="mt-1 block truncate text-sm text-slate-800">{item.name}</span>
                   </div>
                   <button
                     type="button"

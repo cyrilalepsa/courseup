@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Plus, Trash2 } from "lucide-react";
 import { useCallback } from "react";
 import type { IngestedItem, ItemCategory } from "@/types/ingestion";
-import { QualityScoreBadge } from "@/components/quality/QualityScoreBadge";
+import { ItemBadgeRow } from "@/components/item/ItemBadgeRow";
 import { createIngestedItem } from "./mockIngestion";
 
 const CATEGORIES: ItemCategory[] = ["frais", "épicerie", "boissons", "autre"];
@@ -93,14 +93,11 @@ export function ParsedItemsPreview({ items, onChange, onOptimize }: ParsedItemsP
                   className="border-b border-slate-200/80 last:border-0"
                 >
                   <td className="px-2 py-2">
-                    <div className="flex items-center gap-2">
-                      <QualityScoreBadge score={item.qualityScore} />
-                      <input
-                        value={item.name}
-                        onChange={(e) => updateItem(item.id, { name: e.target.value })}
-                        className="neria-input w-full min-w-[120px] px-2 py-1.5"
-                      />
-                    </div>
+                    <input
+                      value={item.name}
+                      onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                      className="neria-input w-full min-w-[120px] px-2 py-1.5"
+                    />
                   </td>
                   <td className="px-2 py-2">
                     <input
@@ -135,6 +132,9 @@ export function ParsedItemsPreview({ items, onChange, onOptimize }: ParsedItemsP
                         </option>
                       ))}
                     </select>
+                  </td>
+                  <td className="px-2 py-2">
+                    <ItemBadgeRow attributes={item.attributes} qualityScore={item.qualityScore} />
                   </td>
                   <td className="px-2 py-2 text-xs text-slate-600">
                     {Math.round(item.confidenceScore * 100)}%

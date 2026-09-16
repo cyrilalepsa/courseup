@@ -1,21 +1,23 @@
 import { motion } from "framer-motion";
-import { Camera, FileUp, Link2, Share2, Type } from "lucide-react";
+import { ListPlus, Camera, FileUp, Link2, Share2, Type } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExportModal } from "@/components/export/ExportModal";
 import { useCourseUp } from "@/context/CourseUpContext";
 import { createExportBundle } from "@/services/exportService";
 import { parseReceiptText } from "@/services/textParserService";
 import type { IngestedItem } from "@/types/ingestion";
+import { DirectListInput } from "@/components/ingestion/DirectListInput";
 import { EcosystemBridge } from "@/components/ecosystem/EcosystemBridge";
 import { FileUploadZone } from "./FileUploadZone";
 import { ParsedItemsPreview } from "./ParsedItemsPreview";
 import { TicketScanZone } from "./TicketScanZone";
 
-type TabId = "scan" | "text" | "file" | "bridge";
+type TabId = "scan" | "text" | "file" | "direct" | "bridge";
 
 const tabs: { id: TabId; label: string; icon: typeof Camera }[] = [
   { id: "scan", label: "Photo ticket", icon: Camera },
   { id: "text", label: "Collage texte", icon: Type },
+  { id: "direct", label: "Saisie directe", icon: ListPlus },
   { id: "file", label: "Import fichier", icon: FileUp },
   { id: "bridge", label: "Ponts Écosystème", icon: Link2 },
 ];
@@ -106,6 +108,7 @@ export function IngestionHub({ onOptimize }: IngestionHubProps) {
       <div className="mt-4 min-h-[200px]">
         {activeTab === "scan" && <TicketScanZone onItemsExtracted={replaceItems} />}
         {activeTab === "file" && <FileUploadZone onItemsExtracted={replaceItems} />}
+        {activeTab === "direct" && <DirectListInput onItemsAdded={mergeItems} />}
         {activeTab === "bridge" && (
           <EcosystemBridge showImport showExport={false} onItemsExtracted={mergeItems} items={items} />
         )}
