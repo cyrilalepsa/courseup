@@ -5,6 +5,7 @@ export interface ItemAttributes {
   glycemicIndex?: number;
   isGlutenFree?: boolean;
   isLowSodium?: boolean;
+  isLowGlycemic?: boolean;
   tags: string[];
 }
 

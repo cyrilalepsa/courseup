@@ -21,17 +21,17 @@ const STEP_COPY: Record<
 > = {
   ingestion: {
     sprint: "Sprint 5",
-    step: "Étape 1",
-    title: "CourseUp — Recette Cockpit & démo multi-tenant",
+    step: "Étapes 2 & 3",
+    title: "CourseUp — Drive API, recherche & bridge Heritia",
     description:
-      "Barre recette démo : rôles Super Admin/VIP/Complimentary/Standard, commerçants Selys injectés et simulations postMessage.",
+      "Connecteurs Drive mock/live, recherche Nutri-Score dans la saisie directe, export frais Heritia (file sync hors-ligne).",
   },
   optimizer: {
-    sprint: "Sprint 4",
-    step: "Étape 2",
-    title: "CourseUp — Optimiseur, Pass Caisse & Cashback N2O",
+    sprint: "Sprint 5",
+    step: "Étapes 2 & 3",
+    title: "CourseUp — Bridge Heritia & sync frigo",
     description:
-      "Filtres nutrition, panier optimisé, Pass Caisse (QR + fidélité) et crédit N2O selon vos économies réelles.",
+      "Export frais vers Heritia (file IndexedDB hors-ligne), confirmation à la clôture des courses.",
   },
   dispatch: {
     sprint: "Sprint 4",
@@ -52,6 +52,8 @@ export default function App() {
     checkoutWallet,
     redeemMerchantReward,
     cockpitDemoProfile,
+    heritiaSyncNotice,
+    completeShoppingHeritiaSync,
   } = useCourseUp();
   const [step, setStep] = useState<AppStep>("ingestion");
   const [optimizedBasket, setOptimizedBasket] = useState<OptimizedBasket | null>(null);
@@ -68,6 +70,10 @@ export default function App() {
       optimizedBasket,
     );
   }, [items, optimizedBasket, step]);
+
+  const handleCompleteShopping = useCallback(async () => {
+    await completeShoppingHeritiaSync(items.map((item) => item.id));
+  }, [completeShoppingHeritiaSync, items]);
 
   const handleOptimize = useCallback(() => {
     setStep("optimizer");
@@ -219,6 +225,10 @@ export default function App() {
             basket={optimizedBasket}
             onClose={() => setInStoreOpen(false)}
             onOpenCheckoutPass={() => setCheckoutPassOpen(true)}
+            heritiaSyncNotice={heritiaSyncNotice}
+            onCompleteShopping={() => {
+              void handleCompleteShopping();
+            }}
           />
         )}
       </AnimatePresence>

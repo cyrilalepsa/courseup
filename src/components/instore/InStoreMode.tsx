@@ -30,13 +30,22 @@ interface InStoreModeProps {
   basket: OptimizedBasket;
   onClose: () => void;
   onOpenCheckoutPass?: () => void;
+  heritiaSyncNotice?: import("@/types/heritia").HeritiaSyncNotice | null;
+  onCompleteShopping?: () => void;
 }
 
 function lineTotal(item: IngestedItem): number {
   return Number((estimateUnitPrice(item) * item.quantity).toFixed(2));
 }
 
-export function InStoreMode({ items, basket, onClose, onOpenCheckoutPass }: InStoreModeProps) {
+export function InStoreMode({
+  items,
+  basket,
+  onClose,
+  onOpenCheckoutPass,
+  heritiaSyncNotice,
+  onCompleteShopping,
+}: InStoreModeProps) {
   const storeId = resolveInStoreShoppingStoreId(basket);
   const enrichedItems = useMemo(() => ensureItemAttributesList(items), [items]);
 
@@ -389,6 +398,32 @@ export function InStoreMode({ items, basket, onClose, onOpenCheckoutPass }: InSt
           </section>
         )}
       </div>
+
+      <footer className="border-t border-white/10 bg-[#0B1120]/95 px-4 py-3">
+        <div className="mx-auto flex max-w-lg flex-col gap-2">
+          {progress >= 1 && (
+            <motion.button
+              type="button"
+              className="neria-cta-primary w-full py-2.5 text-sm"
+              onClick={() => {
+                onCompleteShopping?.();
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              Clôturer mes courses
+            </motion.button>
+          )}
+          {heritiaSyncNotice && heritiaSyncNotice.freshCount > 0 && (
+            <p className="neria-badge-tag text-center text-[11px] text-emerald-100">
+              {heritiaSyncNotice.freshCount} produit
+              {heritiaSyncNotice.freshCount > 1 ? "s" : ""} frais synchronisé
+              {heritiaSyncNotice.freshCount > 1 ? "s" : ""} avec Heritia
+              {heritiaSyncNotice.status === "queued" ? " (file d’attente)" : ""}
+            </p>
+          )}
+        </div>
+      </footer>
     </motion.div>
   );
 }

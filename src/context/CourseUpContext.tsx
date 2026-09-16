@@ -71,9 +71,23 @@ import {
   enqueueSyncJob,
   flushSyncQueue,
   loadGamificationState,
+  processSyncJob,
   saveCashbackLedger,
   saveGamificationBadges,
 } from "@/services/syncManager";
+import {
+  buildHeritiaFridgePayload,
+  extractFreshPerishableItems,
+  forceHeritiaExportFromItems,
+  HERITIA_SYNC_NOTICE_EVENT,
+  queueHeritiaFridgeExport,
+} from "@/services/heritiaBridgeService";
+import {
+  refreshDriveCatalogFromApis,
+  simulateDriveApiCatalogPush,
+} from "@/services/api/driveConnectorService";
+import { DEMO_DRIVE_API_PUSH_BATCH } from "@/config/driveProductCatalog";
+import type { HeritiaSyncNotice } from "@/types/heritia";
 import type { CashbackLedgerEntry } from "@/types/cashback";
 import type { CheckoutWalletState } from "@/types/checkout";
 import type { GamificationBadgeRecord } from "@/types/gamification";
@@ -144,6 +158,7 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   const [cockpitDemoProfile, setCockpitDemoProfile] = useState<CockpitDemoProfile>(
     () => getActiveDemoProfile(),
   );
+  const [heritiaSyncNotice, setHeritiaSyncNotice] = useState<HeritiaSyncNotice | null>(null);
 
   useEffect(() => {
     notificationPrefsRef.current = notificationPrefs;
@@ -182,15 +197,19 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isHydrated) return undefined;
     return bindOnlineSyncFlush(() => {
-      void flushSyncQueue(async (job) => {
-        if (job.kind === "heritia_fresh_export") {
-          if (typeof navigator !== "undefined" && !navigator.onLine) return false;
-          return true;
-        }
-        return true;
-      });
+      void flushSyncQueue(processSyncJob);
     });
   }, [isHydrated]);
+
+  useEffect(() => {
+    const onHeritiaNotice = (event: Event) => {
+      const notice = (event as CustomEvent<HeritiaSyncNotice>).detail;
+      if (!notice || typeof notice.freshCount !== "number") return;
+      setHeritiaSyncNotice(notice);
+    };
+    window.addEventListener(HERITIA_SYNC_NOTICE_EVENT, onHeritiaNotice);
+    return () => window.removeEventListener(HERITIA_SYNC_NOTICE_EVENT, onHeritiaNotice);
+  }, []);
 
   const persistLocation = useCallback((prefs: LocationPreferences) => {
     const computed = withNearbyStores(prefs);
@@ -414,17 +433,18 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       }
 
       emitHeritiaFreshExport(bundle);
-      void enqueueSyncJob("heritia_fresh_export", {
-        orderId: order.id,
-        deeplink: bundle.createdAt,
-        items: bundle.items.filter((i) => i.category === "frais").length,
+      const payload = buildHeritiaFridgePayload(bundle.items, bundle.createdAt);
+      void queueHeritiaFridgeExport(payload).then(() => {
+        if (typeof navigator !== "undefined" && navigator.onLine) {
+          void flushSyncQueue(processSyncJob);
+        }
       });
 
       const hasDiscountStop = basket.splits.some(
         (s) => s.store.id === "lidl" || s.store.id === "aldi",
       );
       const selysItemCount = isolateSelysProducts(basket).length;
-      const freshItemCount = bundle.items.filter((i) => i.category === "frais").length;
+      const freshItemCount = extractFreshPerishableItems(bundle.items).length;
       const badgeIds = evaluateBadgeUnlocks({
         totalSavingsEuro: order.totalSavings,
         hasDiscountStop,
@@ -473,6 +493,38 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
 
   const purgeLocalCourseUpData = useCallback(async () => {
     await purgeDemoIndexedDb();
+  }, []);
+
+  const completeShoppingHeritiaSync = useCallback(
+    async (checkedItemIds?: string[]): Promise<HeritiaSyncNotice | null> => {
+      const idSet = checkedItemIds?.length ? new Set(checkedItemIds) : undefined;
+      const scoped = extractFreshPerishableItems(items, {
+        onlyItemIds: idSet,
+      });
+      const payload = buildHeritiaFridgePayload(scoped, new Date().toISOString());
+      if (payload.items.length === 0) return null;
+      const notice = await queueHeritiaFridgeExport(payload);
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        await flushSyncQueue(processSyncJob);
+      }
+      setHeritiaSyncNotice(notice);
+      return notice;
+    },
+    [items],
+  );
+
+  const triggerDemoDriveApiPush = useCallback(async () => {
+    simulateDriveApiCatalogPush(DEMO_DRIVE_API_PUSH_BATCH);
+    await refreshDriveCatalogFromApis();
+  }, []);
+
+  const triggerDemoHeritiaExport = useCallback(async () => {
+    const notice = await forceHeritiaExportFromItems(items);
+    setHeritiaSyncNotice(notice);
+  }, [items]);
+
+  const clearHeritiaSyncNotice = useCallback(() => {
+    setHeritiaSyncNotice(null);
   }, []);
 
   const setSearchRadius = useCallback(
@@ -536,6 +588,7 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       gamificationBadges,
       checkoutWallet,
       cockpitDemoProfile,
+      heritiaSyncNotice,
       locationPrefs,
       nearbyStores,
       selectedStores,
@@ -562,6 +615,10 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       triggerDemoGeofenceAlert,
       triggerDemoN2OSync,
       purgeLocalCourseUpData,
+      completeShoppingHeritiaSync,
+      triggerDemoDriveApiPush,
+      triggerDemoHeritiaExport,
+      clearHeritiaSyncNotice,
       saveOrder,
       setSearchRadius,
       setManualLocation,
@@ -577,6 +634,7 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       gamificationBadges,
       checkoutWallet,
       cockpitDemoProfile,
+      heritiaSyncNotice,
       locationPrefs,
       nearbyStores,
       selectedStores,
@@ -601,6 +659,10 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       triggerDemoGeofenceAlert,
       triggerDemoN2OSync,
       purgeLocalCourseUpData,
+      completeShoppingHeritiaSync,
+      triggerDemoDriveApiPush,
+      triggerDemoHeritiaExport,
+      clearHeritiaSyncNotice,
       saveOrder,
       setSearchRadius,
       setManualLocation,

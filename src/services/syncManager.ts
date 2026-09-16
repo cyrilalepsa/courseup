@@ -3,6 +3,7 @@ import type { CashbackLedgerEntry } from "@/types/cashback";
 import type { CheckoutWalletState } from "@/types/checkout";
 import type { GamificationBadgeRecord } from "@/types/gamification";
 import type { SyncJob } from "@/types/sync";
+import { deliverHeritiaSyncJob } from "@/services/heritiaBridgeService";
 import { DEFAULT_CHECKOUT_WALLET } from "@/config/checkoutWallet";
 
 export interface GamificationPersistedState {
@@ -68,8 +69,19 @@ export async function enqueueSyncJob(
   return next;
 }
 
+export async function processSyncJob(job: SyncJob): Promise<boolean> {
+  switch (job.kind) {
+    case "heritia_fresh_export":
+      return deliverHeritiaSyncJob(job);
+    case "badge_snapshot":
+      return typeof navigator === "undefined" || navigator.onLine;
+    default:
+      return true;
+  }
+}
+
 export async function flushSyncQueue(
-  handler: (job: SyncJob) => Promise<boolean>,
+  handler: (job: SyncJob) => Promise<boolean> = processSyncJob,
 ): Promise<SyncJob[]> {
   const queue = (await storageRead<SyncJob[]>(STORAGE_KEYS.syncQueue)) ?? [];
   if (!queue.length) return [];

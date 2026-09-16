@@ -1,15 +1,22 @@
 import { motion } from "framer-motion";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Search, Sparkles } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { ITEM_TAG_DEFINITIONS } from "@/config/itemCatalog";
 import { createIngestedItem } from "@/features/ingestion/mockIngestion";
 import {
+  driveHitToItemAttributes,
+  searchDriveProducts,
+} from "@/services/api/driveConnectorService";
+import { getFilterDefinitions } from "@/services/filterService";
+import {
   findAutocompleteSuggestions,
   mergeItemAttributes,
 } from "@/services/itemAttributeService";
-import type { IngestedItem } from "@/types/ingestion";
+import type { DriveProductHit } from "@/types/driveApi";
+import type { IngestedItem, ItemCategory } from "@/types/ingestion";
 import type { ItemAttributes } from "@/types/item";
 import { EMPTY_ITEM_ATTRIBUTES } from "@/types/item";
+import { ItemBadgeRow } from "@/components/item/ItemBadgeRow";
 
 interface DirectListInputProps {
   onItemsAdded: (items: IngestedItem[]) => void;
@@ -20,14 +27,36 @@ export function DirectListInput({ onItemsAdded }: DirectListInputProps) {
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState("u");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchFilterIds, setSearchFilterIds] = useState<string[]>([]);
+  const [itemCategory, setItemCategory] = useState<ItemCategory>("épicerie");
   const [attributeDraft, setAttributeDraft] = useState<ItemAttributes>({
     ...EMPTY_ITEM_ATTRIBUTES,
   });
 
-  const suggestions = useMemo(
-    () => findAutocompleteSuggestions(draftName, 6),
+  const filterDefinitions = useMemo(() => getFilterDefinitions(), []);
+
+  const localSuggestions = useMemo(
+    () => findAutocompleteSuggestions(draftName, 4),
     [draftName],
   );
+
+  const driveResults = useMemo(() => {
+    const text = draftName.trim();
+    if (!text || text.includes("\n") || text.length < 2) {
+      return { hits: [] as DriveProductHit[] };
+    }
+    return searchDriveProducts({
+      text,
+      filterIds: searchFilterIds,
+      limit: 8,
+    });
+  }, [draftName, searchFilterIds]);
+
+  const toggleSearchFilter = useCallback((filterId: string) => {
+    setSearchFilterIds((prev) =>
+      prev.includes(filterId) ? prev.filter((id) => id !== filterId) : [...prev, filterId],
+    );
+  }, []);
 
   const toggleTag = useCallback((tagId: string) => {
     setSelectedTags((prev) => {
@@ -36,9 +65,7 @@ export function DirectListInput({ onItemsAdded }: DirectListInputProps) {
       const def = ITEM_TAG_DEFINITIONS.find((t) => t.id === tagId);
       if (def) {
         setAttributeDraft((attrs) =>
-          exists
-            ? attrs
-            : mergeItemAttributes(attrs, def.apply),
+          exists ? attrs : mergeItemAttributes(attrs, def.apply),
         );
       }
       return next;
@@ -50,6 +77,13 @@ export function DirectListInput({ onItemsAdded }: DirectListInputProps) {
     if (defaults) {
       setAttributeDraft((attrs) => mergeItemAttributes(attrs, defaults));
     }
+  }, []);
+
+  const applyDriveHit = useCallback((hit: DriveProductHit) => {
+    setDraftName(hit.name);
+    setItemCategory(hit.category);
+    setAttributeDraft(driveHitToItemAttributes(hit));
+    setUnit(hit.category === "frais" ? (hit.name.toLowerCase().includes("lait") ? "L" : "u") : "u");
   }, []);
 
   const addItem = useCallback(() => {
@@ -67,6 +101,7 @@ export function DirectListInput({ onItemsAdded }: DirectListInputProps) {
         name,
         quantity,
         unit,
+        category: itemCategory,
         attributes,
         qualityScore: attributes.qualityScore,
       },
@@ -79,7 +114,7 @@ export function DirectListInput({ onItemsAdded }: DirectListInputProps) {
     setUnit("u");
     setSelectedTags([]);
     setAttributeDraft({ ...EMPTY_ITEM_ATTRIBUTES });
-  }, [attributeDraft, draftName, onItemsAdded, quantity, selectedTags, unit]);
+  }, [attributeDraft, draftName, itemCategory, onItemsAdded, quantity, selectedTags, unit]);
 
   const addBulkLines = useCallback(() => {
     const lines = draftName
@@ -102,11 +137,33 @@ export function DirectListInput({ onItemsAdded }: DirectListInputProps) {
     >
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-          Saisie directe
+          Saisie directe · Drive API
         </p>
         <p className="text-sm text-slate-600">
-          Ajoutez des articles avec auto-complétion, tags régime et filtres nutritionnels.
+          Recherche multi-critères, auto-complétion locale et catalogue connecteurs Drive.
         </p>
+      </div>
+
+      <div>
+        <p className="mb-2 text-[11px] font-medium text-slate-600">Filtres recherche</p>
+        <div className="flex flex-wrap gap-2">
+          {filterDefinitions.map((filter) => {
+            const active = searchFilterIds.includes(filter.id);
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => toggleSearchFilter(filter.id)}
+                className={`neria-badge-tag transition ${
+                  active ? "ring-2 ring-violet-500 ring-offset-1" : "opacity-80"
+                }`}
+                title={filter.description}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -121,9 +178,34 @@ export function DirectListInput({ onItemsAdded }: DirectListInputProps) {
           placeholder={"Lait demi-écrémé\nRiz basmati\nTomates"}
           className="neria-input w-full resize-none px-3 py-2.5 text-sm"
         />
-        {suggestions.length > 0 && draftName.trim() && !draftName.includes("\n") && (
+
+        {driveResults.hits.length > 0 && !draftName.includes("\n") && (
+          <ul className="rounded-xl border border-blue-200 bg-white py-1 shadow-sm">
+            <li className="px-3 py-1 text-[10px] font-semibold uppercase text-blue-600">
+              <Search className="mr-1 inline h-3 w-3" />
+              Résultats Drive
+            </li>
+            {driveResults.hits.map((hit) => (
+              <li key={hit.sku} className="border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => applyDriveHit(hit)}
+                  className="flex w-full flex-col gap-1 px-3 py-2 text-left hover:bg-blue-50"
+                >
+                  <span className="text-sm font-medium text-slate-900">{hit.name}</span>
+                  <span className="text-[11px] text-slate-600">
+                    {hit.connectorLabel} · {hit.aisleLabel} · {hit.priceEuro.toFixed(2)} €
+                  </span>
+                  <ItemBadgeRow attributes={driveHitToItemAttributes(hit)} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {localSuggestions.length > 0 && draftName.trim() && !draftName.includes("\n") && (
           <ul className="rounded-xl border border-slate-200 bg-white py-1 shadow-sm">
-            {suggestions.map((s) => (
+            {localSuggestions.map((s) => (
               <li key={s.id}>
                 <button
                   type="button"
