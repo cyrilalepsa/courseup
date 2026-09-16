@@ -1,3 +1,4 @@
+import type { MacroAisleId } from "@/types/aisle";
 import type { DispatchOrder } from "@/types/dispatch";
 import type { IngestedItem } from "@/types/ingestion";
 import {
@@ -21,6 +22,8 @@ export const STORAGE_KEYS = {
   n2oBalance: "n2oBalance",
   locationPrefs: "locationPrefs",
   notificationPrefs: "notificationPrefs",
+  aisleLayouts: "aisleLayouts",
+  instoreSession: "instoreSession",
 } as const;
 
 export const DEFAULT_N2O_BALANCE = 1250;
@@ -166,4 +169,32 @@ export async function appendOrder(order: DispatchOrder): Promise<void> {
   const current = (await read<DispatchOrder[]>(STORAGE_KEYS.orders)) ?? [];
   if (current.some((o) => o.id === order.id)) return;
   await saveOrdersHistory([order, ...current].slice(0, 50));
+}
+
+type AisleLayoutMap = Record<string, MacroAisleId[]>;
+
+export interface InStoreSessionState {
+  storeId: string;
+  checkedIds: string[];
+  deferredIds: string[];
+  updatedAt: string;
+}
+
+export async function loadAisleOrder(storeId: string): Promise<MacroAisleId[] | null> {
+  const map = await read<AisleLayoutMap>(STORAGE_KEYS.aisleLayouts);
+  return map?.[storeId] ?? null;
+}
+
+export async function saveAisleOrder(storeId: string, order: MacroAisleId[]): Promise<void> {
+  const map = (await read<AisleLayoutMap>(STORAGE_KEYS.aisleLayouts)) ?? {};
+  map[storeId] = order;
+  await write(STORAGE_KEYS.aisleLayouts, map);
+}
+
+export async function loadInStoreSession(): Promise<InStoreSessionState | null> {
+  return read<InStoreSessionState>(STORAGE_KEYS.instoreSession);
+}
+
+export async function saveInStoreSession(session: InStoreSessionState): Promise<void> {
+  await write(STORAGE_KEYS.instoreSession, session);
 }

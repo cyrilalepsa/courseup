@@ -5,6 +5,7 @@ import {
   Download,
   MapPin,
   ShoppingBag,
+  Store,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -24,7 +25,13 @@ function detectStandalone(): boolean {
   );
 }
 
-export function Header() {
+interface HeaderProps {
+  shoppingReady?: boolean;
+  onStartInStore?: () => void;
+}
+
+export function Header(props: HeaderProps = {}) {
+  const { shoppingReady, onStartInStore } = props;
   const {
     n2oBalance,
     locationPrefs,
@@ -98,6 +105,17 @@ export function Header() {
 
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             <div className="flex items-center gap-2">
+              {shoppingReady && onStartInStore && (
+                <motion.button
+                  type="button"
+                  onClick={onStartInStore}
+                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/40 bg-emerald-400/15 px-2 py-1.5 text-[10px] font-semibold text-emerald-100 sm:text-[11px]"
+                  whileTap={{ scale: 0.96 }}
+                >
+                  <Store className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Démarrer mes courses</span>
+                </motion.button>
+              )}
               <button
                 type="button"
                 onClick={() => setNotificationSettingsOpen(true)}

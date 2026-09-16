@@ -58,6 +58,7 @@ import {
   type StoreBrand,
 } from "@/types/store";
 import { createIngestedItem } from "@/features/ingestion/mockIngestion";
+import { ensureQualityScores } from "@/services/qualityScoreService";
 
 interface CourseUpContextValue {
   isHydrated: boolean;
@@ -171,7 +172,7 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     loadPersistedState().then((state) => {
       if (cancelled) return;
-      setItemsState(state.cart);
+      setItemsState(ensureQualityScores(state.cart));
       setN2oBalance(state.n2oBalance);
       setOrdersHistory(state.ordersHistory);
       const computed = withNearbyStores(state.locationPrefs);
@@ -284,8 +285,9 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setItems = useCallback((next: IngestedItem[]) => {
-    setItemsState(next);
-    void saveCart(next);
+    const enriched = ensureQualityScores(next);
+    setItemsState(enriched);
+    void saveCart(enriched);
   }, []);
 
   const addItem = useCallback(
