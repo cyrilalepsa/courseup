@@ -6,10 +6,11 @@ import {
   Navigation,
   ShoppingCart,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { StoreSelector } from "@/components/store/StoreSelector";
 import { useCourseUp } from "@/context/CourseUpContext";
-import { getDiscountSuggestions } from "@/services/discountService";
+import { NutritionFilterPanel } from "@/components/optimizer/NutritionFilterPanel";
+import { applyItemFilters } from "@/services/filterService";
 import type { IngestedItem } from "@/types/ingestion";
 import type { OptimizationMode, OptimizedBasket } from "@/types/optimizer";
 import { CartOptimizer } from "./CartOptimizer";
@@ -20,21 +21,35 @@ interface OptimizerHubProps {
   items: IngestedItem[];
   onBack: () => void;
   onProceedToDispatch: (basket: OptimizedBasket) => void;
+  onBasketReady?: (basket: OptimizedBasket) => void;
+  onStartInStore?: (basket: OptimizedBasket) => void;
 }
 
-export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHubProps) {
+export function OptimizerHub({
+  items,
+  onBack,
+  onProceedToDispatch,
+  onBasketReady,
+  onStartInStore,
+}: OptimizerHubProps) {
   const { selectedStores, setItems } = useCourseUp();
   const [mode, setMode] = useState<OptimizationMode>("multi-drive");
   const [discountAppliedItemIds, setDiscountAppliedItemIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [nutritionFilterIds, setNutritionFilterIds] = useState<string[]>([]);
+
+  const optimizerItems = useMemo(
+    () => applyItemFilters(items, nutritionFilterIds),
+    [items, nutritionFilterIds],
+  );
 
   const discountSavingsTotal = useMemo(() => {
-    const summary = getDiscountSuggestions(items);
+    const summary = getDiscountSuggestions(optimizerItems);
     return summary.suggestions
       .filter((s) => discountAppliedItemIds.has(s.itemId))
       .reduce((n, s) => n + s.savingsAmount, 0);
-  }, [items, discountAppliedItemIds]);
+  }, [optimizerItems, discountAppliedItemIds]);
 
   const optimizeOptions: OptimizeCartOptions = useMemo(
     () => ({
@@ -46,11 +61,17 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
   );
 
   const basket = useMemo(
-    () => optimizeCart(items, mode, optimizeOptions),
-    [items, mode, optimizeOptions],
+    () => optimizeCart(optimizerItems, mode, optimizeOptions),
+    [optimizerItems, mode, optimizeOptions],
   );
 
+  useEffect(() => {
+    onBasketReady?.(basket);
+  }, [basket, onBasketReady]);
+
   const totalLines = basket.splits.reduce((n, s) => n + s.items.length, 0);
+
+  const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
 
   const handleItemsChange = useCallback(
     (next: IngestedItem[]) => {
@@ -77,6 +98,19 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
       </button>
 
       <StoreSelector variant="inline" />
+
+      <NutritionFilterPanel
+        itemsCount={optimizerItems.length}
+        allItems={items}
+        activeFilterIds={nutritionFilterIds}
+        onToggleFilter={(filterId) =>
+          setNutritionFilterIds((prev) =>
+            prev.includes(filterId)
+              ? prev.filter((id) => id !== filterId)
+              : [...prev, filterId],
+          )
+        }
+      />
 
       <div className="neria-card p-4">
         <div className="flex items-start gap-3">
@@ -111,7 +145,7 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
       </div>
 
       <CartOptimizer
-        items={items}
+        items={optimizerItems}
         mode={mode}
         onModeChange={setMode}
         basket={basket}
@@ -163,10 +197,16 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
                   key={`${split.store.id}-${line.itemId}`}
                   className="flex items-center justify-between gap-2 py-2 text-sm"
                 >
-                  <span className="text-slate-800">
-                    {line.name}{" "}
-                    <span className="text-slate-600">
-                      × {line.quantity} {line.unit}
+                  <span className="flex min-w-0 items-center gap-2 text-slate-800">
+                    <ItemBadgeRow
+                      attributes={itemById.get(line.itemId)?.attributes}
+                      qualityScore={itemById.get(line.itemId)?.qualityScore}
+                    />
+                    <span className="truncate">
+                      {line.name}{" "}
+                      <span className="text-slate-600">
+                        × {line.quantity} {line.unit}
+                      </span>
                     </span>
                   </span>
                   <span className="shrink-0 font-medium text-slate-900">
@@ -178,6 +218,17 @@ export function OptimizerHub({ items, onBack, onProceedToDispatch }: OptimizerHu
           </motion.article>
         ))}
       </div>
+
+      {onStartInStore && (
+        <motion.button
+          type="button"
+          onClick={() => onStartInStore(basket)}
+          className="neria-cta-primary flex w-full items-center justify-center gap-2 px-4 py-3.5 text-sm"
+          whileTap={{ scale: 0.98 }}
+        >
+          Démarrer mes courses (Mode In-Store)
+        </motion.button>
+      )}
 
       <motion.button
         type="button"

@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Plus, Trash2 } from "lucide-react";
 import { useCallback } from "react";
 import type { IngestedItem, ItemCategory } from "@/types/ingestion";
+import { ItemBadgeRow } from "@/components/item/ItemBadgeRow";
 import { createIngestedItem } from "./mockIngestion";
 
 const CATEGORIES: ItemCategory[] = ["frais", "épicerie", "boissons", "autre"];
@@ -75,6 +76,7 @@ export function ParsedItemsPreview({ items, onChange, onOptimize }: ParsedItemsP
               <th className="px-2 py-2 font-medium">Qté</th>
               <th className="px-2 py-2 font-medium">Unité</th>
               <th className="px-2 py-2 font-medium">Catégorie</th>
+              <th className="px-2 py-2 font-medium">Nutri</th>
               <th className="px-2 py-2 font-medium">Conf.</th>
               <th className="px-2 py-2" />
             </tr>
@@ -130,6 +132,9 @@ export function ParsedItemsPreview({ items, onChange, onOptimize }: ParsedItemsP
                         </option>
                       ))}
                     </select>
+                  </td>
+                  <td className="px-2 py-2">
+                    <ItemBadgeRow attributes={item.attributes} qualityScore={item.qualityScore} />
                   </td>
                   <td className="px-2 py-2 text-xs text-slate-600">
                     {Math.round(item.confidenceScore * 100)}%

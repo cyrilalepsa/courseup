@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Header } from "@/components/layout/Header";
+import { InStoreMode } from "@/components/instore/InStoreMode";
 import { useCourseUp } from "@/context/CourseUpContext";
 import { DispatchHub } from "@/features/dispatch/DispatchHub";
 import { IngestionHub } from "@/features/ingestion/IngestionHub";
@@ -15,18 +16,18 @@ const STEP_COPY: Record<
   { sprint: string; step: string; title: string; description: string }
 > = {
   ingestion: {
-    sprint: "Sprint 3",
-    step: "Étape 2",
-    title: "CourseUp — Ingestion & export liste",
+    sprint: "Sprint 4",
+    step: "Étape 1",
+    title: "CourseUp — Ingestion & Nutri-Score",
     description:
-      "Scan, collage ou ponts écosystème — puis exportez la liste (partage, QR, fichiers) avant l'optimisation N2O.",
+      "Saisie directe ou import : auto-complétion, tags régimes à la volée, badges Nutri A→F et préparation du parcours macro-rayons.",
   },
   optimizer: {
-    sprint: "Sprint 3",
-    step: "Étape 3",
-    title: "CourseUp — Notifications & proximité",
+    sprint: "Sprint 4",
+    step: "Étape 1",
+    title: "CourseUp — Optimiseur & Mode In-Store",
     description:
-      "Alertes PWA : proximité Selys/drives (< 2 km), paliers cashback N2O et rappels de retrait drive.",
+      "Filtres nutrition configurables, panier optimisé, puis mode magasin (macro-rayons réordonnables, badges et coche tactile).",
   },
   dispatch: {
     sprint: "Sprint 3",
@@ -41,16 +42,26 @@ export default function App() {
   const { items, clearCart } = useCourseUp();
   const [step, setStep] = useState<AppStep>("ingestion");
   const [optimizedBasket, setOptimizedBasket] = useState<OptimizedBasket | null>(null);
+  const [inStoreOpen, setInStoreOpen] = useState(false);
 
   const handleOptimize = useCallback(() => {
     setStep("optimizer");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  const handleBasketReady = useCallback((basket: OptimizedBasket) => {
+    setOptimizedBasket(basket);
+  }, []);
+
   const handleProceedDispatch = useCallback((basket: OptimizedBasket) => {
     setOptimizedBasket(basket);
     setStep("dispatch");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const handleStartInStore = useCallback((basket: OptimizedBasket) => {
+    setOptimizedBasket(basket);
+    setInStoreOpen(true);
   }, []);
 
   const handleBackToIngestion = useCallback(() => {
@@ -66,15 +77,25 @@ export default function App() {
   const handleNewOrder = useCallback(() => {
     clearCart();
     setOptimizedBasket(null);
+    setInStoreOpen(false);
     setStep("ingestion");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [clearCart]);
 
   const copy = STEP_COPY[step];
+  const canStartInStore =
+    !!optimizedBasket && items.length > 0 && (step === "optimizer" || step === "dispatch");
 
   return (
     <div className="neria-app-shell">
-      <Header />
+      <Header
+        shoppingReady={canStartInStore}
+        onStartInStore={
+          canStartInStore && optimizedBasket
+            ? () => handleStartInStore(optimizedBasket)
+            : undefined
+        }
+      />
 
       <main className="relative mx-auto w-full max-w-3xl flex-1 px-4 pb-8 pt-5">
         <motion.div
@@ -122,6 +143,8 @@ export default function App() {
                 items={items}
                 onBack={handleBackToIngestion}
                 onProceedToDispatch={handleProceedDispatch}
+                onBasketReady={handleBasketReady}
+                onStartInStore={handleStartInStore}
               />
             </motion.div>
           )}
@@ -148,6 +171,16 @@ export default function App() {
           CourseUp · NeriaCorp · PWA offline-ready
         </p>
       </footer>
+
+      <AnimatePresence>
+        {inStoreOpen && optimizedBasket && (
+          <InStoreMode
+            items={items}
+            basket={optimizedBasket}
+            onClose={() => setInStoreOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

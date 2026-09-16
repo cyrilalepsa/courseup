@@ -1,3 +1,7 @@
+import type { ItemAttributes, QualityScore } from "@/types/item";
+
+export type { QualityScore } from "@/types/item";
+
 export type IngestionItemSource =
   | "ocr"
   | "file"
@@ -17,6 +21,9 @@ export interface IngestedItem {
   category: ItemCategory;
   confidenceScore: number;
   source: IngestionItemSource;
+  attributes: ItemAttributes;
+  /** Miroir de attributes.qualityScore pour compatibilité ascendante */
+  qualityScore?: QualityScore;
 }
 
 export interface EcosystemImport {
