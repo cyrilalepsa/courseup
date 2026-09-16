@@ -5,11 +5,14 @@ import {
   Circle,
   Loader2,
   RotateCcw,
+  Share2,
   Truck,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ExportModal } from "@/components/export/ExportModal";
 import type { DispatchOrder, DispatchStatus } from "@/types/dispatch";
 import { useCourseUp } from "@/context/CourseUpContext";
+import { createExportBundle } from "@/services/exportService";
 import {
   computeGlobalStatus,
   createDispatchOrder,
@@ -26,9 +29,16 @@ interface DispatchHubProps {
 }
 
 export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
-  const { addN2OBalance, saveOrder } = useCourseUp();
+  const { addN2OBalance, saveOrder, items } = useCourseUp();
   const [order, setOrder] = useState<DispatchOrder>(() => createDispatchOrder(basket));
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportSession, setExportSession] = useState(0);
   const orderPersistedRef = useRef(false);
+
+  const exportBundle = useMemo(
+    () => createExportBundle("dispatch", items, basket, order),
+    [items, basket, order],
+  );
 
   const steps = useMemo(() => stepsFromOrder(order), [order]);
 
@@ -94,7 +104,7 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
             <Truck className="h-5 w-5 text-blue-600" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
               Hub de dispatch · {order.id}
             </p>
@@ -102,6 +112,17 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
               Export vers drives affiliés & bons Selys
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              setExportSession((n) => n + 1);
+              setExportOpen(true);
+            }}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:border-blue-400"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Export
+          </button>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
@@ -206,6 +227,13 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
         <RotateCcw className="h-4 w-4" />
         Nouvelle commande
       </motion.button>
+
+      <ExportModal
+        key={exportSession}
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        bundle={exportBundle}
+      />
     </motion.div>
   );
 }

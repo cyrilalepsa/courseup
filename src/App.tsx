@@ -15,11 +15,11 @@ const STEP_COPY: Record<
   { sprint: string; step: string; title: string; description: string }
 > = {
   ingestion: {
-    sprint: "Sprint 2",
-    step: "Étape 3",
-    title: "CourseUp — OCR & parser multi-format",
+    sprint: "Sprint 3",
+    step: "Étape 2",
+    title: "CourseUp — Ingestion & export liste",
     description:
-      "Scannez un ticket (Tesseract), collez du texte ou importez PDF/TXT/CSV. Les articles sont parsés avec score de confiance OCR.",
+      "Scan, collage ou ponts écosystème — puis exportez la liste (partage, QR, fichiers) avant l'optimisation N2O.",
   },
   optimizer: {
     sprint: "Sprint 2",
@@ -29,11 +29,11 @@ const STEP_COPY: Record<
       "Choisissez vos drives et commerces Selys à proximité. L'optimiseur affiche les points de retrait précis et la distance totale des trajets.",
   },
   dispatch: {
-    sprint: "Sprint 1",
-    step: "Étape 3",
-    title: "CourseUp v1.0 — Hub de Dispatch",
+    sprint: "Sprint 3",
+    step: "Étape 2",
+    title: "CourseUp — Export, QR & passerelles NeriaCorp",
     description:
-      "Export des paniers vers les drives affiliés, génération des bons Selys et crédit N2O sur votre solde persistant.",
+      "Partagez votre panier optimisé (Web Share, QR pass drive/Selys, fichiers TXT/PDF) et synchronisez Heritia & MamanDouce.",
   },
 };
 
