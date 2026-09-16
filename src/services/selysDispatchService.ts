@@ -1,4 +1,5 @@
 import { buildQrPassPayload } from "@/services/exportService";
+import { tagExternalCartUrl, trackDriveAffiliateRedirect } from "@/services/monetizationService";
 import type { DispatchOrder } from "@/types/dispatch";
 import type { AssignedLineItem, OptimizedBasket, StoreSplit } from "@/types/optimizer";
 
@@ -71,8 +72,14 @@ export function openSelysMarketplace(
 ): SelysDispatchBundle | null {
   const bundle = buildSelysDispatchBundle(basket, order);
   if (!bundle) return null;
-  const url = buildSelysMarketplaceUrl(bundle);
+  const url = tagExternalCartUrl(buildSelysMarketplaceUrl(bundle), SELYS_STORE_ID);
   if (typeof window !== "undefined") {
+    trackDriveAffiliateRedirect({
+      storeId: SELYS_STORE_ID,
+      storeName: "Selys Marketplace",
+      subtotalEuro: bundle.subtotal,
+      orderId: bundle.orderId,
+    });
     window.open(url, "_blank", "noopener,noreferrer");
   }
   return bundle;

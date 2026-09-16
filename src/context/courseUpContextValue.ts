@@ -10,6 +10,7 @@ import type {
   NotificationPreferences,
 } from "@/types/notifications";
 import type { OptimizedBasket } from "@/types/optimizer";
+import type { MonetizationSessionTotals } from "@/types/monetization";
 import type { HeritiaSyncNotice } from "@/types/heritia";
 import type {
   DriveStore,
@@ -28,6 +29,8 @@ export interface CourseUpContextValue {
   checkoutWallet: CheckoutWalletState;
   cockpitDemoProfile: CockpitDemoProfile;
   heritiaSyncNotice: HeritiaSyncNotice | null;
+  affiliationTrackingActive: boolean;
+  monetizationSessionTotals: MonetizationSessionTotals;
   locationPrefs: LocationPreferences;
   nearbyStores: DriveStore[];
   selectedStores: Partial<Record<StoreBrand, DriveStore>>;
@@ -55,6 +58,12 @@ export interface CourseUpContextValue {
   triggerDemoDriveApiPush: () => Promise<void>;
   triggerDemoHeritiaExport: () => Promise<void>;
   clearHeritiaSyncNotice: () => void;
+  setAffiliationTrackingActive: (active: boolean) => void;
+  registerAffiliateDriveRedirect: (
+    checkout: import("@/types/dispatch").DriveCheckoutLink,
+    orderId?: string,
+  ) => Promise<void>;
+  finalizeMonetizationForOrder: (order: DispatchOrder) => Promise<void>;
   saveOrder: (order: DispatchOrder) => Promise<void>;
   setSearchRadius: (radius: SearchRadiusKm) => void;
   setManualLocation: (postalCode: string, city: string) => void;

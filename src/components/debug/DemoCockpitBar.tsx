@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
   ChevronUp,
+  Coins,
   Database,
   MapPin,
   RefreshCw,
@@ -31,6 +32,9 @@ export function DemoCockpitBar() {
     purgeLocalCourseUpData,
     triggerDemoDriveApiPush,
     triggerDemoHeritiaExport,
+    affiliationTrackingActive,
+    monetizationSessionTotals,
+    setAffiliationTrackingActive,
   } = useCourseUp();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -109,6 +113,41 @@ export function DemoCockpitBar() {
                     {ROLE_LABEL[role]}
                   </button>
                 ))}
+              </div>
+
+              <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-slate-800">
+                  <Coins className="h-3.5 w-3.5 text-violet-600" />
+                  Monétisation &amp; Affiliation
+                </p>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-slate-600">Mode affiliation</span>
+                  <button
+                    type="button"
+                    className="neria-toggle"
+                    data-on={affiliationTrackingActive ? "true" : "false"}
+                    aria-pressed={affiliationTrackingActive}
+                    onClick={() => setAffiliationTrackingActive(!affiliationTrackingActive)}
+                  >
+                    <span className="neria-toggle-knob" />
+                    <span className="sr-only">
+                      {affiliationTrackingActive ? "Actif" : "Passif"}
+                    </span>
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-600">
+                  {affiliationTrackingActive ? "Actif" : "Passif"} · CA session{" "}
+                  <span className="font-semibold text-slate-900">
+                    {monetizationSessionTotals.revenueEuro.toFixed(2)} €
+                  </span>{" "}
+                  · commission estimée{" "}
+                  <span className="font-semibold text-violet-700">
+                    {monetizationSessionTotals.commissionEuro.toFixed(2)} €
+                  </span>
+                </p>
+                <p className="mt-0.5 text-[10px] text-slate-500">
+                  {monetizationSessionTotals.ledgerEntryCount} enregistrement(s) ledger
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">

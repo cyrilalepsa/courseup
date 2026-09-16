@@ -88,6 +88,20 @@ import {
 } from "@/services/api/driveConnectorService";
 import { DEMO_DRIVE_API_PUSH_BATCH } from "@/config/driveProductCatalog";
 import type { HeritiaSyncNotice } from "@/types/heritia";
+import type { DriveCheckoutLink } from "@/types/dispatch";
+import {
+  isAffiliationTrackingActive,
+  setAffiliationTrackingActive as persistAffiliationMode,
+  sumMonetizationTotals,
+  trackDriveAffiliateRedirect,
+} from "@/services/monetizationService";
+import {
+  filterLedgerBySession,
+  loadNeriaLedger,
+  recordCheckoutMonetization,
+  recordOrderMonetizationLedger,
+} from "@/services/neriaLedgerService";
+import type { MonetizationSessionTotals } from "@/types/monetization";
 import type { CashbackLedgerEntry } from "@/types/cashback";
 import type { CheckoutWalletState } from "@/types/checkout";
 import type { GamificationBadgeRecord } from "@/types/gamification";
@@ -154,11 +168,22 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     useState<NotificationPermissionState>(() => getNotificationPermission());
   const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   const notificationPrefsRef = useRef(notificationPrefs);
+  const [monetizationSessionId] = useState(
+    () => `mon-${Date.now().toString(36)}`,
+  );
+  const monetizationSessionIdRef = useRef(monetizationSessionId);
   const cockpitProfileRef = useRef(getActiveDemoProfile());
   const [cockpitDemoProfile, setCockpitDemoProfile] = useState<CockpitDemoProfile>(
     () => getActiveDemoProfile(),
   );
   const [heritiaSyncNotice, setHeritiaSyncNotice] = useState<HeritiaSyncNotice | null>(null);
+  const [affiliationTrackingActive, setAffiliationTrackingActiveState] = useState(
+    () => isAffiliationTrackingActive(),
+  );
+  const [monetizationSessionTotals, setMonetizationSessionTotals] =
+    useState<MonetizationSessionTotals>(() =>
+      sumMonetizationTotals([], 0),
+    );
 
   useEffect(() => {
     notificationPrefsRef.current = notificationPrefs;
@@ -211,6 +236,15 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(HERITIA_SYNC_NOTICE_EVENT, onHeritiaNotice);
   }, []);
 
+  const refreshMonetizationTotals = useCallback(async () => {
+    const ledger = await loadNeriaLedger();
+    const sessionEntries = filterLedgerBySession(
+      ledger,
+      monetizationSessionIdRef.current,
+    );
+    setMonetizationSessionTotals(sumMonetizationTotals(sessionEntries));
+  }, []);
+
   const persistLocation = useCallback((prefs: LocationPreferences) => {
     const computed = withNearbyStores(prefs);
     setLocationPrefs(computed.prefs);
@@ -258,11 +292,12 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
         }));
       }
       setIsHydrated(true);
+      void refreshMonetizationTotals();
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshMonetizationTotals]);
 
   useEffect(() => {
     if (!isHydrated) return undefined;
@@ -527,6 +562,41 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     setHeritiaSyncNotice(null);
   }, []);
 
+  const setAffiliationTrackingActive = useCallback(
+    (active: boolean) => {
+      persistAffiliationMode(active);
+      setAffiliationTrackingActiveState(active);
+    },
+    [],
+  );
+
+  const registerAffiliateDriveRedirect = useCallback(
+    async (checkout: DriveCheckoutLink, orderId?: string) => {
+      trackDriveAffiliateRedirect({
+        storeId: checkout.storeId,
+        storeName: checkout.storeName,
+        subtotalEuro: checkout.subtotal,
+        orderId,
+        checkoutId: checkout.id,
+      });
+      await recordCheckoutMonetization(
+        checkout,
+        monetizationSessionIdRef.current,
+        orderId,
+      );
+      await refreshMonetizationTotals();
+    },
+    [refreshMonetizationTotals],
+  );
+
+  const finalizeMonetizationForOrder = useCallback(
+    async (order: DispatchOrder) => {
+      await recordOrderMonetizationLedger(order, monetizationSessionIdRef.current);
+      await refreshMonetizationTotals();
+    },
+    [refreshMonetizationTotals],
+  );
+
   const setSearchRadius = useCallback(
     (radius: SearchRadiusKm) => {
       persistLocation({ ...locationPrefs, searchRadiusKm: radius });
@@ -589,6 +659,8 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       checkoutWallet,
       cockpitDemoProfile,
       heritiaSyncNotice,
+      affiliationTrackingActive,
+      monetizationSessionTotals,
       locationPrefs,
       nearbyStores,
       selectedStores,
@@ -619,6 +691,9 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       triggerDemoDriveApiPush,
       triggerDemoHeritiaExport,
       clearHeritiaSyncNotice,
+      setAffiliationTrackingActive,
+      registerAffiliateDriveRedirect,
+      finalizeMonetizationForOrder,
       saveOrder,
       setSearchRadius,
       setManualLocation,
@@ -635,6 +710,8 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       checkoutWallet,
       cockpitDemoProfile,
       heritiaSyncNotice,
+      affiliationTrackingActive,
+      monetizationSessionTotals,
       locationPrefs,
       nearbyStores,
       selectedStores,
@@ -663,6 +740,9 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       triggerDemoDriveApiPush,
       triggerDemoHeritiaExport,
       clearHeritiaSyncNotice,
+      setAffiliationTrackingActive,
+      registerAffiliateDriveRedirect,
+      finalizeMonetizationForOrder,
       saveOrder,
       setSearchRadius,
       setManualLocation,

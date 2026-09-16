@@ -20,11 +20,11 @@ const STEP_COPY: Record<
   { sprint: string; step: string; title: string; description: string }
 > = {
   ingestion: {
-    sprint: "Sprint 5",
-    step: "Étapes 2 & 3",
-    title: "CourseUp — Drive API, recherche & bridge Heritia",
+    sprint: "Sprint 6",
+    step: "Étape 1",
+    title: "CourseUp — Affiliation Drive & ledger NeriaCorp",
     description:
-      "Connecteurs Drive mock/live, recherche Nutri-Score dans la saisie directe, export frais Heritia (file sync hors-ligne).",
+      "Tracking affiliation sur deeplinks Drive, webhooks discrets et ledger de commission IndexedDB pour le Cockpit.",
   },
   optimizer: {
     sprint: "Sprint 5",

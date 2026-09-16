@@ -28,6 +28,7 @@ export const STORAGE_KEYS = {
   gamificationBadges: "gamificationBadges",
   loyaltyWallet: "loyaltyWallet",
   syncQueue: "syncQueue",
+  neriaLedger: "neriaLedger",
 } as const;
 
 export const DEFAULT_N2O_BALANCE = 1250;

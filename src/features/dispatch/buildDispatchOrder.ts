@@ -1,6 +1,7 @@
 import {
   computeCashbackCreditFromBasket,
 } from "@/services/cashbackService";
+import { buildAffiliateDriveDeeplink } from "@/services/monetizationService";
 import type {
   DispatchOrder,
   DispatchStatus,
@@ -19,13 +20,19 @@ function tokenForStore(storeId: string, rate: number): string {
   return `NC-${Math.abs(hash).toString(16).slice(0, 8).toUpperCase()}`;
 }
 
-function buildDriveCheckout(split: StoreSplit, index: number): DriveCheckoutLink {
+function buildDriveCheckout(split: StoreSplit, index: number, orderId?: string): DriveCheckoutLink {
   const affiliationToken = tokenForStore(split.store.id, split.store.affiliationRate);
   const ratePct = Math.round(split.store.affiliationRate * 100);
   const itemSkus = split.items.map((i) => encodeURIComponent(i.name)).join(",");
-  const deeplinkUrl =
-    `https://affiliate.neriacorp.io/drive/${split.store.id}` +
-    `?token=${affiliationToken}&aff=${ratePct}&ref=courseup&slot=${index + 1}&items=${itemSkus}`;
+  const deeplinkUrl = buildAffiliateDriveDeeplink({
+    storeId: split.store.id,
+    baseUrl: `https://affiliate.neriacorp.io/drive/${split.store.id}`,
+    affiliationToken,
+    affiliationRatePercent: ratePct,
+    slotIndex: index,
+    itemSkus,
+    orderId,
+  });
 
   return {
     id: `drive-${split.store.id}-${index}`,
@@ -68,12 +75,15 @@ export function createDispatchOrder(basket: OptimizedBasket): DispatchOrder {
   const driveSplits = basket.splits.filter((s) => s.store.type === "drive");
   const selysSplit = basket.splits.find((s) => s.store.id === "selys-local");
 
-  const driveCheckouts = driveSplits.map((split, index) => buildDriveCheckout(split, index));
+  const orderId = `ord-${Date.now().toString(36)}`;
+  const driveCheckouts = driveSplits.map((split, index) =>
+    buildDriveCheckout(split, index, orderId),
+  );
   const selysVoucher = selysSplit ? buildSelysVoucher(selysSplit) : null;
   const cashback = computeCashbackCreditFromBasket(basket);
 
   return {
-    id: `ord-${Date.now().toString(36)}`,
+    id: orderId,
     createdAt: new Date().toISOString(),
     mode: basket.mode,
     driveCheckouts,
