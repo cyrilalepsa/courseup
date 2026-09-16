@@ -1,9 +1,28 @@
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
+import { useCallback, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { IngestionHub } from "@/features/ingestion/IngestionHub";
+import { OptimizerHub } from "@/features/optimizer/OptimizerHub";
+import type { IngestedItem } from "@/types/ingestion";
+
+type AppStep = "ingestion" | "optimizer";
 
 export default function App() {
+  const [step, setStep] = useState<AppStep>("ingestion");
+  const [validatedItems, setValidatedItems] = useState<IngestedItem[]>([]);
+
+  const handleOptimize = useCallback((items: IngestedItem[]) => {
+    setValidatedItems(items);
+    setStep("optimizer");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const handleBackToIngestion = useCallback(() => {
+    setStep("ingestion");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   return (
     <div className="flex min-h-dvh flex-col bg-navy">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -19,6 +38,7 @@ export default function App() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
+          layout
         >
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15">
@@ -26,20 +46,45 @@ export default function App() {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-emerald-accent/90">
-                Sprint 1 · Étape 1
+                Sprint 1 · {step === "ingestion" ? "Étape 1" : "Étape 2"}
               </p>
               <h2 className="mt-0.5 text-lg font-bold text-white sm:text-xl">
-                CourseUp v1.0 — Ingestion Intelligente
+                {step === "ingestion"
+                  ? "CourseUp v1.0 — Ingestion Intelligente"
+                  : "CourseUp v1.0 — Optimiseur Multi-Enseignes N2O"}
               </h2>
               <p className="mt-1 text-sm leading-relaxed text-slate-400">
-                Importez tickets, texte ou listes depuis l&apos;écosystème NeriaCorp.
-                Validez vos articles avant l&apos;optimisation multi-enseignes N2O.
+                {step === "ingestion"
+                  ? "Importez tickets, texte ou listes depuis l'écosystème NeriaCorp. Validez vos articles avant l'optimisation multi-enseignes N2O."
+                  : "Dispatch algorithmique Carrefour, Leclerc, Auchan et circuits Selys — cashback affiliation et conversion N2O en temps réel."}
               </p>
             </div>
           </div>
         </motion.div>
 
-        <IngestionHub />
+        <AnimatePresence mode="wait">
+          {step === "ingestion" ? (
+            <motion.div
+              key="ingestion"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3 }}
+            >
+              <IngestionHub onOptimize={handleOptimize} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="optimizer"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3 }}
+            >
+              <OptimizerHub items={validatedItems} onBack={handleBackToIngestion} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       <footer className="relative border-t border-border/60 bg-navy/90 px-4 py-4 text-center backdrop-blur-md">

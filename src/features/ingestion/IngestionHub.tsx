@@ -15,7 +15,11 @@ const tabs: { id: TabId; label: string; icon: typeof FileUp }[] = [
   { id: "bridge", label: "Ponts Écosystème", icon: Link2 },
 ];
 
-export function IngestionHub() {
+interface IngestionHubProps {
+  onOptimize: (items: IngestedItem[]) => void;
+}
+
+export function IngestionHub({ onOptimize }: IngestionHubProps) {
   const [activeTab, setActiveTab] = useState<TabId>("file");
   const [items, setItems] = useState<IngestedItem[]>([]);
   const [textValue, setTextValue] = useState("");
@@ -118,7 +122,11 @@ export function IngestionHub() {
         )}
       </div>
 
-      <ParsedItemsPreview items={items} onChange={setItems} />
+      <ParsedItemsPreview
+        items={items}
+        onChange={setItems}
+        onOptimize={() => onOptimize(items)}
+      />
     </section>
   );
 }
