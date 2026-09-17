@@ -1,25 +1,24 @@
 import { resolveAffiliationPartner } from "@/config/affiliationConfig";
+import {
+  buildAffiliateRedirectUrl,
+  shouldApplyAffiliateNetworkWrap,
+} from "@/services/affiliateLinkBuilder";
+import {
+  getAffiliationModeLabel,
+  isAffiliationTrackingActive,
+  setAffiliationTrackingActive,
+} from "@/services/affiliationMode";
 import type {
   AffiliationRedirectEvent,
   CommissionModel,
   MonetizationSessionTotals,
 } from "@/types/monetization";
 
-const AFFILIATION_MODE_STORAGE_KEY = "courseup:affiliation-mode";
-
-export function isAffiliationTrackingActive(): boolean {
-  if (typeof localStorage === "undefined") return true;
-  return localStorage.getItem(AFFILIATION_MODE_STORAGE_KEY) !== "passive";
-}
-
-export function setAffiliationTrackingActive(active: boolean): void {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(AFFILIATION_MODE_STORAGE_KEY, active ? "active" : "passive");
-}
-
-export function getAffiliationModeLabel(): "active" | "passive" {
-  return isAffiliationTrackingActive() ? "active" : "passive";
-}
+export {
+  getAffiliationModeLabel,
+  isAffiliationTrackingActive,
+  setAffiliationTrackingActive,
+};
 
 export interface DriveDeeplinkBuildInput {
   storeId: string;
@@ -42,15 +41,11 @@ export function estimatePartnerCommission(
 }
 
 /** Injecte partner_id / sub_id et tags NeriaCorp sur les deeplinks Drive. */
-export function tagAffiliateDeeplink(
+function tagDriveDestinationUrl(
   rawUrl: string,
   storeId: string,
   options?: { orderId?: string; checkoutId?: string },
 ): string {
-  if (!isAffiliationTrackingActive()) {
-    return rawUrl;
-  }
-
   const partner = resolveAffiliationPartner(storeId);
   const url = new URL(rawUrl);
   url.searchParams.set("partner_id", partner.partnerId);
@@ -62,8 +57,27 @@ export function tagAffiliateDeeplink(
   return url.toString();
 }
 
+export function tagAffiliateDeeplink(
+  rawUrl: string,
+  storeId: string,
+  options?: { orderId?: string; checkoutId?: string; sessionId?: string },
+): string {
+  let destinationUrl = rawUrl;
+  if (shouldApplyAffiliateNetworkWrap()) {
+    destinationUrl = tagDriveDestinationUrl(rawUrl, storeId, options);
+  }
+
+  const wrapped = buildAffiliateRedirectUrl({
+    storeId,
+    destinationUrl,
+    orderId: options?.orderId,
+    checkoutId: options?.checkoutId,
+    sessionId: options?.sessionId,
+  });
+  return wrapped.url;
+}
+
 export function buildAffiliateDriveDeeplink(input: DriveDeeplinkBuildInput): string {
-  const partner = resolveAffiliationPartner(input.storeId);
   const base =
     input.baseUrl ||
     `https://affiliate.neriacorp.io/drive/${input.storeId}`;
@@ -75,15 +89,17 @@ export function buildAffiliateDriveDeeplink(input: DriveDeeplinkBuildInput): str
   url.searchParams.set("slot", String(input.slotIndex + 1));
   url.searchParams.set("items", input.itemSkus);
 
-  if (isAffiliationTrackingActive()) {
-    url.searchParams.set("partner_id", partner.partnerId);
-    url.searchParams.set("sub_id", partner.subId);
-    url.searchParams.set("nc_aff", "1");
-    url.searchParams.set("nc_track", "courseup-drive");
-    if (input.orderId) url.searchParams.set("order_id", input.orderId);
+  const driveUrl = url.toString();
+  if (!shouldApplyAffiliateNetworkWrap()) {
+    return driveUrl;
   }
 
-  return url.toString();
+  const tagged = tagDriveDestinationUrl(driveUrl, input.storeId, { orderId: input.orderId });
+  return buildAffiliateRedirectUrl({
+    storeId: input.storeId,
+    destinationUrl: tagged,
+    orderId: input.orderId,
+  }).url;
 }
 
 export function dispatchAffiliationWebhook(event: AffiliationRedirectEvent): void {
@@ -148,8 +164,12 @@ export function trackDriveAffiliateRedirect(input: TrackDriveRedirectInput): Aff
   return event;
 }
 
-export function tagExternalCartUrl(url: string, storeId: string): string {
-  return tagAffiliateDeeplink(url, storeId);
+export function tagExternalCartUrl(
+  url: string,
+  storeId: string,
+  options?: { orderId?: string; checkoutId?: string; sessionId?: string },
+): string {
+  return tagAffiliateDeeplink(url, storeId, options);
 }
 
 export function emptyMonetizationTotals(): MonetizationSessionTotals {

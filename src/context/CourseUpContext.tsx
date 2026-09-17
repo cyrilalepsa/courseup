@@ -101,7 +101,15 @@ import {
   recordCheckoutMonetization,
   recordOrderMonetizationLedger,
 } from "@/services/neriaLedgerService";
+import {
+  initNeriaAuthBridge,
+  signOutNeria,
+  simulateWebAuthnPasskeySignIn,
+  subscribeNeriaAuth,
+  switchDemoNeriaUser,
+} from "@/services/neriaAuthService";
 import type { MonetizationSessionTotals } from "@/types/monetization";
+import type { NeriaAuthSession } from "@/types/neriaAuth";
 import type { CashbackLedgerEntry } from "@/types/cashback";
 import type { CheckoutWalletState } from "@/types/checkout";
 import type { GamificationBadgeRecord } from "@/types/gamification";
@@ -184,10 +192,15 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     useState<MonetizationSessionTotals>(() =>
       sumMonetizationTotals([], 0),
     );
+  const [neriaAuthSession, setNeriaAuthSession] = useState<NeriaAuthSession | null>(null);
 
   useEffect(() => {
     notificationPrefsRef.current = notificationPrefs;
   }, [notificationPrefs]);
+
+  useEffect(() => subscribeNeriaAuth(setNeriaAuthSession), []);
+
+  useEffect(() => initNeriaAuthBridge("courseup"), []);
 
   useEffect(() => {
     injectDemoMerchantCatalog();
@@ -597,6 +610,24 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     [refreshMonetizationTotals],
   );
 
+  const signInDemoNeriaPasskey = useCallback(async (userId?: string) => {
+    const result = await simulateWebAuthnPasskeySignIn(userId);
+    if (!result.ok) {
+      throw new Error(result.error ?? "Connexion Passkey échouée");
+    }
+  }, []);
+
+  const switchNeriaDemoUser = useCallback(async (userId: string) => {
+    const result = await switchDemoNeriaUser(userId);
+    if (!result.ok) {
+      throw new Error(result.error ?? "Changement utilisateur échoué");
+    }
+  }, []);
+
+  const signOutNeriaAuth = useCallback(() => {
+    signOutNeria();
+  }, []);
+
   const setSearchRadius = useCallback(
     (radius: SearchRadiusKm) => {
       persistLocation({ ...locationPrefs, searchRadiusKm: radius });
@@ -694,6 +725,10 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       setAffiliationTrackingActive,
       registerAffiliateDriveRedirect,
       finalizeMonetizationForOrder,
+      neriaAuthSession,
+      signInDemoNeriaPasskey,
+      switchNeriaDemoUser,
+      signOutNeriaAuth,
       saveOrder,
       setSearchRadius,
       setManualLocation,
@@ -743,6 +778,10 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       setAffiliationTrackingActive,
       registerAffiliateDriveRedirect,
       finalizeMonetizationForOrder,
+      neriaAuthSession,
+      signInDemoNeriaPasskey,
+      switchNeriaDemoUser,
+      signOutNeriaAuth,
       saveOrder,
       setSearchRadius,
       setManualLocation,
