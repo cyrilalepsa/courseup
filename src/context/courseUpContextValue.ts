@@ -11,6 +11,7 @@ import type {
 } from "@/types/notifications";
 import type { OptimizedBasket } from "@/types/optimizer";
 import type { MonetizationSessionTotals } from "@/types/monetization";
+import type { NeriaAuthSession } from "@/types/neriaAuth";
 import type { HeritiaSyncNotice } from "@/types/heritia";
 import type {
   DriveStore,
@@ -79,4 +80,8 @@ export interface CourseUpContextValue {
   ) => void;
   refreshNotificationPermission: () => void;
   requestNotificationsAccess: () => Promise<NotificationPermissionState>;
+  neriaAuthSession: NeriaAuthSession | null;
+  signInDemoNeriaPasskey: (userId?: string) => Promise<void>;
+  switchNeriaDemoUser: (userId: string) => Promise<void>;
+  signOutNeriaAuth: () => void;
 }

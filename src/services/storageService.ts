@@ -215,6 +215,9 @@ export async function purgeAllCourseUpStorage(): Promise<void> {
   }
   try {
     localStorage.removeItem("courseup:bridge-registry:v1");
+    localStorage.removeItem("neria:auth:session:v1");
+    localStorage.removeItem("neria:auth:credentials:v1");
+    localStorage.removeItem("neria:session-bridge:v1");
   } catch {
     /* ignore */
   }

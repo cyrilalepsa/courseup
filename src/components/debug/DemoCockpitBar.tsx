@@ -4,12 +4,15 @@ import {
   ChevronUp,
   Coins,
   Database,
+  Fingerprint,
+  LogOut,
   MapPin,
   RefreshCw,
   Sparkles,
   Upload,
   Wrench,
 } from "lucide-react";
+import { DEMO_NERIA_USERS } from "@/services/neriaAuthService";
 import { useCallback, useState } from "react";
 import { buildDemoAwinAffiliatePreviewUrl } from "@/services/affiliateLinkBuilder";
 import { isDemoCockpitBarEnabled } from "@/config/demoCockpitFlags";
@@ -36,6 +39,10 @@ export function DemoCockpitBar() {
     affiliationTrackingActive,
     monetizationSessionTotals,
     setAffiliationTrackingActive,
+    neriaAuthSession,
+    signInDemoNeriaPasskey,
+    switchNeriaDemoUser,
+    signOutNeriaAuth,
   } = useCourseUp();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -170,6 +177,85 @@ export function DemoCockpitBar() {
                     title={affiliatePreviewUrl}
                   >
                     {affiliatePreviewUrl}
+                  </p>
+                )}
+              </div>
+
+              <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-slate-800">
+                  <Fingerprint className="h-3.5 w-3.5 text-violet-600" />
+                  Authentification SSO NeriaCorp
+                </p>
+                {neriaAuthSession ? (
+                  <p className="text-[10px] text-slate-600">
+                    <span className="font-semibold text-slate-900">
+                      {neriaAuthSession.user.displayName}
+                    </span>{" "}
+                    · {neriaAuthSession.authMethod}
+                    {neriaAuthSession.user.subscription.allAccess
+                      ? " · All-Access"
+                      : ` · ${neriaAuthSession.user.subscription.primaryApp}`}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-500">Non connecté</p>
+                )}
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {DEMO_NERIA_USERS.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      disabled={busy}
+                      className={`neria-badge neria-badge-tag text-[10px] ${
+                        neriaAuthSession?.userId === user.id ? "ring-2 ring-violet-500" : ""
+                      }`}
+                      onClick={() =>
+                        run(`Utilisateur ${user.displayName}`, async () => {
+                          if (neriaAuthSession) {
+                            await switchNeriaDemoUser(user.id);
+                          } else {
+                            await signInDemoNeriaPasskey(user.id);
+                          }
+                        })
+                      }
+                    >
+                      {user.avatarInitials}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="neria-cta-primary flex items-center justify-center gap-1 px-2 py-1.5 text-[10px]"
+                    onClick={() =>
+                      run("Passkey / Touch ID simulé", async () => {
+                        await signInDemoNeriaPasskey();
+                      })
+                    }
+                  >
+                    <Fingerprint className="h-3 w-3" />
+                    Passkey
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || !neriaAuthSession}
+                    className="neria-cta-checkout flex items-center justify-center gap-1 px-2 py-1.5 text-[10px]"
+                    onClick={() =>
+                      run("Déconnexion NeriaCorp", () => {
+                        signOutNeriaAuth();
+                      })
+                    }
+                  >
+                    <LogOut className="h-3 w-3" />
+                    Déconnexion
+                  </button>
+                </div>
+                {neriaAuthSession && (
+                  <p
+                    className="mt-2 max-h-16 overflow-y-auto break-all font-mono text-[9px] text-slate-500"
+                    title={neriaAuthSession.accessToken}
+                  >
+                    JWT pont · {neriaAuthSession.accessToken.slice(0, 48)}…
                   </p>
                 )}
               </div>

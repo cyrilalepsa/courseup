@@ -14,6 +14,7 @@ import type {
   CockpitRightsManifest,
 } from "@/types/cockpitDemo";
 import { injectDemoMerchantCatalog } from "@/services/merchantCatalogService";
+import { purgeNeriaAuthStorage } from "@/services/neriaAuthService";
 
 export const COCKPIT_RIGHTS_MESSAGE = "NERIACORP_COCKPIT_RIGHTS";
 export const COCKPIT_DEMO_PROFILE_EVENT = "neriacorp:cockpit-demo-profile";
@@ -211,6 +212,7 @@ export async function simulateN2OSync(
 }
 
 export async function purgeDemoIndexedDb(): Promise<void> {
+  purgeNeriaAuthStorage();
   await purgeAllCourseUpStorage();
 }
 
