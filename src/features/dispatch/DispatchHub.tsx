@@ -31,7 +31,14 @@ interface DispatchHubProps {
 }
 
 export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
-  const { creditDispatchCompletion, saveOrder, items, notificationPrefs } = useCourseUp();
+  const {
+    creditDispatchCompletion,
+    saveOrder,
+    items,
+    notificationPrefs,
+    registerAffiliateDriveRedirect,
+    finalizeMonetizationForOrder,
+  } = useCourseUp();
   const [order, setOrder] = useState<DispatchOrder>(() => createDispatchOrder(basket));
   const [exportOpen, setExportOpen] = useState(false);
   const [exportSession, setExportSession] = useState(0);
@@ -90,8 +97,17 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
     sessionStorage.setItem(creditKey, "1");
     const finalized: DispatchOrder = { ...order, globalStatus: "completed" };
     void saveOrder(finalized);
+    void finalizeMonetizationForOrder(finalized);
     creditDispatchCompletion(finalized, basket, exportBundle);
-  }, [creditDispatchCompletion, allDone, order, saveOrder, basket, exportBundle]);
+  }, [
+    creditDispatchCompletion,
+    allDone,
+    order,
+    saveOrder,
+    basket,
+    exportBundle,
+    finalizeMonetizationForOrder,
+  ]);
 
   return (
     <motion.div
@@ -205,7 +221,9 @@ export function DispatchHub({ basket, onBack, onNewOrder }: DispatchHubProps) {
             key={checkout.id}
             checkout={checkout}
             index={index}
+            orderId={order.id}
             onStatusChange={updateDriveStatus}
+            onAffiliateRedirect={registerAffiliateDriveRedirect}
           />
         ))}
         {order.driveCheckouts.length === 0 && (

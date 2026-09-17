@@ -6,10 +6,18 @@ import type { DispatchStatus, DriveCheckoutLink } from "@/types/dispatch";
 interface DriveExportCardProps {
   checkout: DriveCheckoutLink;
   index: number;
+  orderId?: string;
   onStatusChange: (id: string, status: DispatchStatus) => void;
+  onAffiliateRedirect?: (checkout: DriveCheckoutLink, orderId?: string) => void;
 }
 
-export function DriveExportCard({ checkout, index, onStatusChange }: DriveExportCardProps) {
+export function DriveExportCard({
+  checkout,
+  index,
+  orderId,
+  onStatusChange,
+  onAffiliateRedirect,
+}: DriveExportCardProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = () => {
@@ -19,6 +27,7 @@ export function DriveExportCard({ checkout, index, onStatusChange }: DriveExport
 
     window.setTimeout(() => {
       onStatusChange(checkout.id, "checkout_started");
+      void onAffiliateRedirect?.(checkout, orderId);
       window.open(checkout.deeplinkUrl, "_blank", "noopener,noreferrer");
       setIsExporting(false);
     }, 900);
