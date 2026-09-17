@@ -628,6 +628,29 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
     signOutNeria();
   }, []);
 
+  const reloadOrderFromHistory = useCallback(
+    (order: DispatchOrder) => {
+      const lines = [
+        ...order.driveCheckouts.flatMap((checkout) => checkout.items),
+        ...(order.selysVoucher?.items ?? []),
+      ];
+      const next = lines.map((line) =>
+        createIngestedItem(
+          {
+            name: line.name,
+            quantity: line.quantity,
+            unit: line.unit,
+            category: "épicerie",
+            confidenceScore: 1,
+          },
+          "text",
+        ),
+      );
+      setItems(next);
+    },
+    [setItems],
+  );
+
   const setSearchRadius = useCallback(
     (radius: SearchRadiusKm) => {
       persistLocation({ ...locationPrefs, searchRadiusKm: radius });
@@ -729,6 +752,7 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       signInDemoNeriaPasskey,
       switchNeriaDemoUser,
       signOutNeriaAuth,
+      reloadOrderFromHistory,
       saveOrder,
       setSearchRadius,
       setManualLocation,
@@ -782,6 +806,7 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       signInDemoNeriaPasskey,
       switchNeriaDemoUser,
       signOutNeriaAuth,
+      reloadOrderFromHistory,
       saveOrder,
       setSearchRadius,
       setManualLocation,
