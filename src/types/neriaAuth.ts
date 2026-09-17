@@ -1,6 +1,10 @@
 export type AuthMethod = "passkey" | "pattern" | "password" | "sso";
 
+import type { NeriaUnifiedAvatar } from "@/types/neriaAvatar";
+
 export type NeriaAppId = "courseup" | "heritia" | "mamandouce";
+
+export type NeriaPlanLabel = "standard" | "vip" | "all-access-maternity";
 
 export interface NeriaSubscriptionPlan {
   status: "active" | "trial" | "expired";
@@ -10,6 +14,8 @@ export interface NeriaSubscriptionPlan {
   bonusApps: { appId: NeriaAppId; discountPercent: number }[];
   /** Option All-Access : toutes les apps NeriaCorp. */
   allAccess: boolean;
+  /** App bonus choisie à -50 % (hors All-Access). */
+  selectedBonusApp?: NeriaAppId;
 }
 
 export interface NeriaUser {
@@ -18,6 +24,9 @@ export interface NeriaUser {
   displayName: string;
   avatarInitials: string;
   subscription: NeriaSubscriptionPlan;
+  planLabel?: NeriaPlanLabel;
+  preferredAuthMethod?: AuthMethod;
+  avatar?: NeriaUnifiedAvatar;
   lastAuthMethod?: AuthMethod;
   createdAt: string;
 }

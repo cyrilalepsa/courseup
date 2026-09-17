@@ -5,6 +5,8 @@ import {
   publishNeriaSessionToBridge,
   type NeriaSessionBridgeEnvelope,
 } from "@/services/neriaSessionBridge";
+import type { NeriaUnifiedAvatar } from "@/types/neriaAvatar";
+import { DEFAULT_NERIA_AVATAR } from "@/types/neriaAvatar";
 import type {
   AuthMethod,
   NeriaAppId,
@@ -17,6 +19,8 @@ import type {
 
 const SESSION_STORAGE_KEY = "neria:auth:session:v1";
 const CREDENTIALS_STORAGE_KEY = "neria:auth:credentials:v1";
+const AVATAR_STORAGE_KEY = "neria:auth:avatar:v1";
+const PROFILE_STORAGE_KEY = "neria:auth:profile:v1";
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const COURSEUP_APP_ID: NeriaAppId = "courseup";
 
@@ -33,7 +37,10 @@ export const DEMO_NERIA_USERS: NeriaUser[] = [
       primaryApp: "courseup",
       bonusApps: [{ appId: "heritia", discountPercent: 50 }],
       allAccess: false,
+      selectedBonusApp: "heritia",
     },
+    planLabel: "standard",
+    preferredAuthMethod: "passkey",
     createdAt: "2025-01-10T08:00:00.000Z",
   },
   {
@@ -49,7 +56,10 @@ export const DEMO_NERIA_USERS: NeriaUser[] = [
         { appId: "mamandouce", discountPercent: 50 },
       ],
       allAccess: false,
+      selectedBonusApp: "heritia",
     },
+    planLabel: "vip",
+    preferredAuthMethod: "passkey",
     createdAt: "2024-06-01T08:00:00.000Z",
   },
   {
@@ -63,9 +73,13 @@ export const DEMO_NERIA_USERS: NeriaUser[] = [
       bonusApps: [],
       allAccess: true,
     },
+    planLabel: "all-access-maternity",
+    preferredAuthMethod: "sso",
     createdAt: "2024-01-01T08:00:00.000Z",
   },
 ];
+
+const BONUS_APP_OPTIONS: NeriaAppId[] = ["heritia", "mamandouce"];
 
 function notify(session: NeriaAuthSession | null): void {
   for (const listener of listeners) {
@@ -133,29 +147,103 @@ function encodeDemoJwt(payload: Record<string, unknown>): string {
   return `${header}.${body}.${signature}`;
 }
 
+function readAvatarMap(): Record<string, NeriaUnifiedAvatar> {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(AVATAR_STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, NeriaUnifiedAvatar>;
+  } catch {
+    return {};
+  }
+}
+
+function writeAvatarMap(map: Record<string, NeriaUnifiedAvatar>): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(map));
+}
+
+function readProfileMap(): Record<string, Partial<NeriaUser>> {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, Partial<NeriaUser>>;
+  } catch {
+    return {};
+  }
+}
+
+function writeProfileMap(map: Record<string, Partial<NeriaUser>>): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(map));
+}
+
+export function mergeStoredUserProfile(user: NeriaUser): NeriaUser {
+  const avatars = readAvatarMap();
+  const profiles = readProfileMap();
+  const patch = profiles[user.id];
+  const avatar = avatars[user.id] ?? user.avatar ?? patch?.avatar;
+  const subscription = {
+    ...user.subscription,
+    ...patch?.subscription,
+    selectedBonusApp:
+      patch?.subscription?.selectedBonusApp ??
+      user.subscription.selectedBonusApp ??
+      user.subscription.bonusApps[0]?.appId,
+  };
+  return {
+    ...user,
+    ...patch,
+    avatar,
+    subscription,
+    preferredAuthMethod:
+      patch?.preferredAuthMethod ?? user.preferredAuthMethod ?? user.lastAuthMethod,
+  };
+}
+
 function createSession(user: NeriaUser, authMethod: AuthMethod): NeriaAuthSession {
+  const enriched = mergeStoredUserProfile(user);
   const issuedAt = new Date();
   const expiresAt = new Date(issuedAt.getTime() + DEFAULT_SESSION_TTL_MS);
-  const sessionId = `ses_${user.id}_${issuedAt.getTime().toString(36)}`;
+  const sessionId = `ses_${enriched.id}_${issuedAt.getTime().toString(36)}`;
   const accessToken = encodeDemoJwt({
-    sub: user.id,
-    email: user.email,
+    sub: enriched.id,
+    email: enriched.email,
     sid: sessionId,
     app: COURSEUP_APP_ID,
-    plan: user.subscription.allAccess ? "all-access" : user.subscription.primaryApp,
+    plan: enriched.subscription.allAccess ? "all-access" : enriched.subscription.primaryApp,
+    avatar: enriched.avatar?.updatedAt,
+    bonusApp: enriched.subscription.selectedBonusApp,
     iat: issuedAt.toISOString(),
     exp: expiresAt.toISOString(),
   });
 
   return {
     sessionId,
-    userId: user.id,
-    user: { ...user, lastAuthMethod: authMethod },
+    userId: enriched.id,
+    user: { ...enriched, lastAuthMethod: authMethod },
     authMethod,
     accessToken,
     issuedAt: issuedAt.toISOString(),
     expiresAt: expiresAt.toISOString(),
   };
+}
+
+function refreshSessionUser(mutator: (user: NeriaUser) => NeriaUser): NeriaAuthSession | null {
+  const session = readSession();
+  if (!session) return null;
+  const nextUser = mutator(session.user);
+  const next = createSession(nextUser, session.authMethod);
+  const preserved: NeriaAuthSession = {
+    ...next,
+    sessionId: session.sessionId,
+    issuedAt: session.issuedAt,
+    expiresAt: session.expiresAt,
+  };
+  writeSession(preserved);
+  publishNeriaSessionToBridge(preserved, COURSEUP_APP_ID, "*");
+  return preserved;
 }
 
 function persistCredentials(
@@ -379,7 +467,122 @@ export function purgeNeriaAuthStorage(): void {
   if (typeof localStorage !== "undefined") {
     localStorage.removeItem(SESSION_STORAGE_KEY);
     localStorage.removeItem(CREDENTIALS_STORAGE_KEY);
+    localStorage.removeItem(AVATAR_STORAGE_KEY);
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
   }
   clearNeriaSessionBridge();
   notify(null);
 }
+
+export function getNeriaCredentialMeta(userId: string): NeriaStoredCredentialMeta | null {
+  return readCredentialMap()[userId] ?? null;
+}
+
+export function authMethodLabel(method: AuthMethod): string {
+  const labels: Record<AuthMethod, string> = {
+    passkey: "Passkey / Biométrie",
+    pattern: "Schéma mobile",
+    password: "Mot de passe",
+    sso: "SSO NeriaCorp",
+  };
+  return labels[method];
+}
+
+export function resolveNeriaPlanDisplay(user: NeriaUser): string {
+  if (user.subscription.allAccess || user.planLabel === "all-access-maternity") {
+    return "All-Access Maternité";
+  }
+  if (user.planLabel === "vip" || user.id === "neria-u-vip") {
+    return "VIP";
+  }
+  return "Standard";
+}
+
+export function isNeriaPremiumUser(user: NeriaUser): boolean {
+  return (
+    user.subscription.allAccess ||
+    user.planLabel === "vip" ||
+    user.planLabel === "all-access-maternity" ||
+    user.id === "neria-u-vip" ||
+    user.id === "neria-u-allaccess"
+  );
+}
+
+export function listSelectableBonusApps(): NeriaAppId[] {
+  return BONUS_APP_OPTIONS;
+}
+
+export async function enablePasskeyForCurrentUser(): Promise<NeriaSignInResult> {
+  const session = readSession();
+  if (!session) return { ok: false, error: "Non connecté" };
+  await simulateWebAuthnPasskeySignIn(session.userId);
+  const profiles = readProfileMap();
+  profiles[session.userId] = {
+    ...profiles[session.userId],
+    preferredAuthMethod: "passkey",
+  };
+  writeProfileMap(profiles);
+  return { ok: true, session: readSession() ?? undefined };
+}
+
+export async function enablePatternForCurrentUser(
+  pattern: string,
+): Promise<NeriaSignInResult> {
+  const session = readSession();
+  if (!session) return { ok: false, error: "Non connecté" };
+  const result = await signInWithUnlockPattern(pattern, session.userId);
+  if (!result.ok) return result;
+  const profiles = readProfileMap();
+  profiles[session.userId] = {
+    ...profiles[session.userId],
+    preferredAuthMethod: "pattern",
+  };
+  writeProfileMap(profiles);
+  return result;
+}
+
+export function updateSelectedBonusApp(appId: NeriaAppId): NeriaAuthSession | null {
+  const session = readSession();
+  if (!session) return null;
+  if (session.user.subscription.allAccess) return session;
+
+  const profiles = readProfileMap();
+  profiles[session.userId] = {
+    ...profiles[session.userId],
+    subscription: {
+      ...session.user.subscription,
+      selectedBonusApp: appId,
+      bonusApps: [{ appId, discountPercent: 50 }],
+    },
+  };
+  writeProfileMap(profiles);
+
+  return refreshSessionUser((user) =>
+    mergeStoredUserProfile({
+      ...user,
+      subscription: {
+        ...user.subscription,
+        selectedBonusApp: appId,
+        bonusApps: [{ appId, discountPercent: 50 }],
+      },
+    }),
+  );
+}
+
+export function saveNeriaAvatar(avatar: NeriaUnifiedAvatar): NeriaAuthSession | null {
+  const session = readSession();
+  if (!session) return null;
+  const map = readAvatarMap();
+  map[session.userId] = { ...avatar, updatedAt: new Date().toISOString() };
+  writeAvatarMap(map);
+  return refreshSessionUser((user) => ({
+    ...mergeStoredUserProfile(user),
+    avatar: map[session.userId],
+  }));
+}
+
+export function getNeriaAvatarForUser(userId: string): NeriaUnifiedAvatar {
+  return readAvatarMap()[userId] ?? DEFAULT_NERIA_AVATAR;
+}
+
+export const NERIA_CLIENT_PORTAL_URL = "https://client.neriacorp.io/espace";

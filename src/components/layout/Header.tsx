@@ -11,9 +11,12 @@ import {
   WifiOff,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
+import { UserProfileModal } from "@/components/profile/UserProfileModal";
 import { StoreSelector } from "@/components/store/StoreSelector";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { useCourseUp } from "@/context/useCourseUp";
+import { isNeriaPremiumUser } from "@/services/neriaAuthService";
 
 type ConnectionStatus = "online" | "offline";
 
@@ -44,7 +47,9 @@ export function Header(props: HeaderProps = {}) {
     setStoreSelectorOpen,
     notificationSettingsOpen,
     setNotificationSettingsOpen,
+    neriaAuthSession,
   } = useCourseUp();
+  const [profileOpen, setProfileOpen] = useState(false);
   const [connection, setConnection] = useState<ConnectionStatus>(
     typeof navigator !== "undefined" && navigator.onLine ? "online" : "offline",
   );
@@ -134,6 +139,24 @@ export function Header(props: HeaderProps = {}) {
               )}
               <button
                 type="button"
+                onClick={() => setProfileOpen(true)}
+                className="rounded-full border border-white/25 bg-white/10 p-0.5 backdrop-blur-md transition hover:bg-white/20"
+                aria-label="Profil et compte NeriaCorp"
+              >
+                <UserAvatar
+                  displayName={neriaAuthSession?.user.displayName}
+                  initials={neriaAuthSession?.user.avatarInitials ?? "NC"}
+                  avatar={neriaAuthSession?.user.avatar}
+                  premium={
+                    neriaAuthSession?.user
+                      ? isNeriaPremiumUser(neriaAuthSession.user)
+                      : false
+                  }
+                  size="sm"
+                />
+              </button>
+              <button
+                type="button"
                 onClick={() => setNotificationSettingsOpen(true)}
                 className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] font-medium text-slate-100 backdrop-blur-md transition hover:bg-white/20"
                 aria-label="Notifications"
@@ -216,6 +239,8 @@ export function Header(props: HeaderProps = {}) {
         open={notificationSettingsOpen}
         onClose={() => setNotificationSettingsOpen(false)}
       />
+
+      <UserProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   );
 }

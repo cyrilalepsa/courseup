@@ -225,4 +225,60 @@ body {
   .neria-demo-bar {
     @apply border border-violet-300/80 shadow-xl shadow-violet-900/20;
   }
+
+  .neria-profile-glass {
+    @apply border border-white/30 bg-[linear-gradient(145deg,rgba(255,255,255,0.92)_0%,rgba(226,232,240,0.75)_100%)] text-slate-900 backdrop-blur-xl;
+  }
+
+  .neria-avatar-halo {
+    @apply pointer-events-none absolute -inset-1 rounded-full;
+    background: radial-gradient(
+      circle,
+      rgba(251, 191, 36, 0.55) 0%,
+      rgba(251, 191, 36, 0.12) 55%,
+      transparent 72%
+    );
+    animation: neria-halo-pulse 2.8s ease-in-out infinite;
+  }
+
+  .neria-avatar-sparkle {
+    @apply pointer-events-none absolute h-1 w-1 rounded-full bg-amber-200;
+    box-shadow: 0 0 6px 1px rgba(251, 191, 36, 0.85);
+  }
+
+  .neria-avatar-sparkle-a {
+    top: 8%;
+    right: 12%;
+    animation: neria-sparkle 2.2s ease-in-out infinite;
+  }
+
+  .neria-avatar-sparkle-b {
+    bottom: 10%;
+    left: 8%;
+    animation: neria-sparkle 2.8s ease-in-out infinite 0.6s;
+  }
+}
+
+@keyframes neria-halo-pulse {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes neria-sparkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
