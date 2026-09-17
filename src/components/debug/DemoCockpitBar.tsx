@@ -11,6 +11,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useCallback, useState } from "react";
+import { buildDemoAwinAffiliatePreviewUrl } from "@/services/affiliateLinkBuilder";
 import { isDemoCockpitBarEnabled } from "@/config/demoCockpitFlags";
 import { DEMO_COCKPIT_ROLES } from "@/services/demoCockpitService";
 import type { CockpitDemoRole } from "@/types/cockpitDemo";
@@ -40,6 +41,7 @@ export function DemoCockpitBar() {
   const [collapsed, setCollapsed] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [affiliatePreviewUrl, setAffiliatePreviewUrl] = useState<string | null>(null);
 
   const run = useCallback(async (label: string, action: () => Promise<void> | void) => {
     setBusy(true);
@@ -148,6 +150,28 @@ export function DemoCockpitBar() {
                 <p className="mt-0.5 text-[10px] text-slate-500">
                   {monetizationSessionTotals.ledgerEntryCount} enregistrement(s) ledger
                 </p>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="mt-2 w-full rounded-lg border border-violet-200 bg-white px-2 py-1.5 text-[10px] font-medium text-violet-800 transition hover:bg-violet-50"
+                  onClick={() => {
+                    const preview = buildDemoAwinAffiliatePreviewUrl();
+                    setAffiliatePreviewUrl(preview.url);
+                    setStatus(
+                      `Lien Awin (clickref ${preview.clickRef}) · réseau ${preview.network}`,
+                    );
+                  }}
+                >
+                  Tester génération URL Awin (panier démo)
+                </button>
+                {affiliatePreviewUrl && (
+                  <p
+                    className="mt-2 max-h-24 overflow-y-auto break-all rounded-lg border border-slate-200 bg-white p-2 font-mono text-[9px] leading-snug text-slate-700"
+                    title={affiliatePreviewUrl}
+                  >
+                    {affiliatePreviewUrl}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2">

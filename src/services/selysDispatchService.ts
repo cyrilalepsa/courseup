@@ -72,7 +72,9 @@ export function openSelysMarketplace(
 ): SelysDispatchBundle | null {
   const bundle = buildSelysDispatchBundle(basket, order);
   if (!bundle) return null;
-  const url = tagExternalCartUrl(buildSelysMarketplaceUrl(bundle), SELYS_STORE_ID);
+  const url = tagExternalCartUrl(buildSelysMarketplaceUrl(bundle), SELYS_STORE_ID, {
+    orderId: bundle.orderId,
+  });
   if (typeof window !== "undefined") {
     trackDriveAffiliateRedirect({
       storeId: SELYS_STORE_ID,
