@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { History, RefreshCw, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { fetchN2OrderHistory, isN2IngressConfigured } from "@/services/api/n2IngressClient";
+import type { N2OrderHistoryEntry } from "@shared/n2IngressApi";
 import {
   buildOrderHistoryRows,
   type OrderHistoryRow,
@@ -13,7 +15,7 @@ import {
 
 interface OrderHistoryTabProps {
   orders: DispatchOrder[];
-  onReloadOrder: (order: DispatchOrder) => void;
+  onReloadOrder: (order: DispatchOrder) => Promise<void>;
 }
 
 function heritiaLabel(status: OrderHistoryRow["heritiaSync"]): string {
@@ -24,13 +26,24 @@ function heritiaLabel(status: OrderHistoryRow["heritiaSync"]): string {
 
 export function OrderHistoryTab({ orders, onReloadOrder }: OrderHistoryTabProps) {
   const [instore, setInstore] = useState<InStoreSessionState | null>(null);
+  const [remoteRows, setRemoteRows] = useState<N2OrderHistoryEntry[]>([]);
 
   useEffect(() => {
     void loadInStoreSession().then(setInstore);
   }, [orders.length]);
 
+  useEffect(() => {
+    if (!isN2IngressConfigured()) return;
+    void fetchN2OrderHistory().then((payload) => {
+      if (payload?.entries?.length) setRemoteRows(payload.entries);
+    });
+  }, [orders.length]);
+
   const rows = useMemo(() => {
-    const base = buildOrderHistoryRows(orders);
+    const base =
+      remoteRows.length > 0
+        ? remoteRows.map((row) => ({ ...row }))
+        : buildOrderHistoryRows(orders);
     if (instore && instore.checkedIds.length > 0) {
       base.unshift({
         id: "instore-active",
@@ -46,7 +59,7 @@ export function OrderHistoryTab({ orders, onReloadOrder }: OrderHistoryTabProps)
       });
     }
     return base;
-  }, [orders, instore]);
+  }, [orders, instore, remoteRows]);
 
   const orderById = useMemo(
     () => new Map(orders.map((order) => [order.id, order])),
@@ -108,7 +121,7 @@ export function OrderHistoryTab({ orders, onReloadOrder }: OrderHistoryTabProps)
               {order && (
                 <button
                   type="button"
-                  onClick={() => onReloadOrder(order)}
+                  onClick={() => void onReloadOrder(order)}
                   className="mt-2 flex w-full items-center justify-center gap-1 rounded-xl border border-blue-200 bg-blue-50/80 py-1.5 text-[10px] font-semibold text-blue-900"
                 >
                   <RefreshCw className="h-3 w-3" />

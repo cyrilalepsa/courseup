@@ -192,10 +192,9 @@ export function UserProfileModal({ open, onClose }: UserProfileModalProps) {
                             disabled={busy}
                             className="flex w-full items-center gap-2 rounded-xl border border-violet-200 bg-violet-50/90 px-3 py-2 text-left text-[11px] font-medium text-violet-900"
                             onClick={() =>
-                              run(
-                                () => enablePasskeyForCurrentUser(),
-                                "Passkey activée sur cet appareil",
-                              )
+                              run(async () => {
+                                await enablePasskeyForCurrentUser();
+                              }, "Passkey activée sur cet appareil")
                             }
                           >
                             <Fingerprint className="h-4 w-4 shrink-0" />
@@ -208,10 +207,9 @@ export function UserProfileModal({ open, onClose }: UserProfileModalProps) {
                             disabled={busy}
                             className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-left text-[11px] font-medium text-slate-800"
                             onClick={() =>
-                              run(
-                                () => enablePatternForCurrentUser("1234"),
-                                "Schéma mobile enregistré (démo 1234)",
-                              )
+                              run(async () => {
+                                await enablePatternForCurrentUser("1234");
+                              }, "Schéma mobile enregistré (démo 1234)")
                             }
                           >
                             <Grid3X3 className="h-4 w-4 shrink-0" />
@@ -282,10 +280,12 @@ export function UserProfileModal({ open, onClose }: UserProfileModalProps) {
                                 key={appId}
                                 type="button"
                                 disabled={busy}
-                                onClick={() => {
-                                  updateSelectedBonusApp(appId);
-                                  setMessage(`App bonus : ${APP_LABELS[appId]} (-50 %)`);
-                                }}
+                                onClick={() =>
+                                  void run(async () => {
+                                    await updateSelectedBonusApp(appId);
+                                    setMessage(`App bonus : ${APP_LABELS[appId]} (-50 %)`);
+                                  }, `App bonus : ${APP_LABELS[appId]}`)
+                                }
                                 className={`rounded-xl border px-3 py-3 text-left text-[11px] font-semibold transition ${
                                   selectedBonus === appId
                                     ? "border-violet-500 bg-violet-50 text-violet-900 ring-2 ring-violet-300"

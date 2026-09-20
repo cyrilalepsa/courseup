@@ -13,9 +13,10 @@ PWA **CourseUp** (NeriaCorp) — Sprint 1, Étape 1 : ingestion multi-format.
 
 ```bash
 npm install
-npm run dev      # développement
-npm run build    # build production (+ service worker)
-npm run start    # sert dist/ (Railway : PORT injecté)
+npm run dev      # développement PWA (proxy /api → N2)
+npm run dev:api  # passerelle Single Ingress N2 (Express)
+npm run build    # build PWA + serveur N2 (server-dist/)
+npm run start    # API N2 + dist/ (Railway : PORT injecté)
 ```
 
 ## Déploiement Railway (Railpack)

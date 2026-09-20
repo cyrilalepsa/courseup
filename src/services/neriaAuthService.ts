@@ -541,7 +541,52 @@ export async function enablePatternForCurrentUser(
   return result;
 }
 
-export function updateSelectedBonusApp(appId: NeriaAppId): NeriaAuthSession | null {
+function mapN2ProfileToUser(
+  profile: import("@shared/n2IngressApi").N2UnifiedUserProfile,
+): Partial<NeriaUser> {
+  return {
+    email: profile.email,
+    displayName: profile.displayName,
+    avatarInitials: profile.avatarInitials,
+    preferredAuthMethod: profile.preferredAuthMethod as AuthMethod,
+    subscription: {
+      status: profile.subscriptionStatus as NeriaUser["subscription"]["status"],
+      primaryApp: "courseup",
+      bonusApps: profile.selectedBonusApp
+        ? [{ appId: profile.selectedBonusApp, discountPercent: 50 }]
+        : [],
+      allAccess: profile.allAccess,
+      selectedBonusApp: profile.selectedBonusApp,
+    },
+    planLabel:
+      profile.planLabel === "vip"
+        ? "vip"
+        : profile.allAccess
+          ? "all-access-maternity"
+          : "standard",
+    avatar: profile.avatar as NeriaUnifiedAvatar | undefined,
+  };
+}
+
+export function applyN2RefreshedSession(
+  accessToken: string,
+  expiresAt: string,
+  profile?: import("@shared/n2IngressApi").N2UnifiedUserProfile,
+): void {
+  const session = readSession();
+  if (!session) return;
+  const userPatch = profile ? mapN2ProfileToUser(profile) : {};
+  const next: NeriaAuthSession = {
+    ...session,
+    accessToken,
+    expiresAt,
+    user: { ...session.user, ...userPatch },
+  };
+  writeSession(next);
+  publishNeriaSessionToBridge(next, COURSEUP_APP_ID, "*");
+}
+
+export async function updateSelectedBonusApp(appId: NeriaAppId): Promise<NeriaAuthSession | null> {
   const session = readSession();
   if (!session) return null;
   if (session.user.subscription.allAccess) return session;
@@ -557,7 +602,7 @@ export function updateSelectedBonusApp(appId: NeriaAppId): NeriaAuthSession | nu
   };
   writeProfileMap(profiles);
 
-  return refreshSessionUser((user) =>
+  const local = refreshSessionUser((user) =>
     mergeStoredUserProfile({
       ...user,
       subscription: {
@@ -567,18 +612,46 @@ export function updateSelectedBonusApp(appId: NeriaAppId): NeriaAuthSession | nu
       },
     }),
   );
+
+  const { postN2BonusApp, isN2IngressConfigured } = await import(
+    "@/services/api/n2IngressClient"
+  );
+  if (!isN2IngressConfigured()) return local;
+  const remote = await postN2BonusApp({ bonusApp: appId });
+  if (remote?.accessToken) {
+    const current = readSession();
+    applyN2RefreshedSession(
+      remote.accessToken,
+      current?.expiresAt ?? new Date(Date.now() + DEFAULT_SESSION_TTL_MS).toISOString(),
+      remote.profile,
+    );
+  }
+  return readSession();
 }
 
-export function saveNeriaAvatar(avatar: NeriaUnifiedAvatar): NeriaAuthSession | null {
+export async function saveNeriaAvatar(avatar: NeriaUnifiedAvatar): Promise<NeriaAuthSession | null> {
   const session = readSession();
   if (!session) return null;
   const map = readAvatarMap();
   map[session.userId] = { ...avatar, updatedAt: new Date().toISOString() };
   writeAvatarMap(map);
-  return refreshSessionUser((user) => ({
+  const local = refreshSessionUser((user) => ({
     ...mergeStoredUserProfile(user),
     avatar: map[session.userId],
   }));
+
+  const { postN2UserAvatar, isN2IngressConfigured } = await import(
+    "@/services/api/n2IngressClient"
+  );
+  if (!isN2IngressConfigured()) return local;
+  const remote = await postN2UserAvatar({
+    avatar: map[session.userId],
+    photoUrl: avatar.photoDataUrl,
+  });
+  if (remote?.accessToken) {
+    applyN2RefreshedSession(remote.accessToken, remote.expiresAt, remote.profile);
+  }
+  return readSession();
 }
 
 export function getNeriaAvatarForUser(userId: string): NeriaUnifiedAvatar {

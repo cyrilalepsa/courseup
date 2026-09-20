@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_DEMO_COCKPIT?: string;
+  readonly VITE_N2_INGRESS_URL?: string;
   readonly VITE_DRIVE_API_MODE?: string;
   readonly VITE_DRIVE_API_CARREFOUR?: string;
   readonly VITE_DRIVE_API_LECLERC?: string;

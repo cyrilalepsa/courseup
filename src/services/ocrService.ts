@@ -1,6 +1,11 @@
+import type { N2ReceiptOcrResponse } from "@shared/n2ReceiptOcr";
 import { createWorker, type Worker } from "tesseract.js";
+import { postN2ReceiptOcr } from "@/services/api/n2IngressClient";
+import { preprocessTicketImage } from "@/services/ticketImagePipeline";
 import { parseImportedFileText, parseReceiptText } from "@/services/textParserService";
+import { matchReceiptLines } from "@/services/receiptProductMatcher";
 import type { IngestedItem } from "@/types/ingestion";
+import { createIngestedItem } from "@/features/ingestion/mockIngestion";
 
 let workerPromise: Promise<Worker> | null = null;
 
@@ -14,31 +19,23 @@ async function getWorker(): Promise<Worker> {
 }
 
 export async function preprocessImageForOcr(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const canvas = document.createElement("canvas");
-  const maxSide = 1600;
-  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas indisponible");
+  return preprocessTicketImage(file);
+}
 
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const { data } = imageData;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    const contrast = Math.min(255, Math.max(0, (gray - 128) * 1.35 + 128));
-    const threshold = contrast > 145 ? 255 : contrast < 95 ? 0 : contrast;
-    data[i] = threshold;
-    data[i + 1] = threshold;
-    data[i + 2] = threshold;
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-  bitmap.close();
-  return canvas.toDataURL("image/png");
+export function n2ReceiptToIngestedItems(receipt: N2ReceiptOcrResponse): IngestedItem[] {
+  const matched = matchReceiptLines(receipt.items);
+  return matched.map((line) =>
+    createIngestedItem(
+      {
+        name: line.matchedName,
+        quantity: line.quantity,
+        unit: "u",
+        category: line.category,
+        confidenceScore: Math.max(0.55, line.matchScore),
+      },
+      "ocr",
+    ),
+  );
 }
 
 export type OcrProgressHandler = (progress: number, status: string) => void;
@@ -46,13 +43,26 @@ export type OcrProgressHandler = (progress: number, status: string) => void;
 export async function recognizeReceiptImage(
   file: File,
   onProgress?: OcrProgressHandler,
-): Promise<{ text: string; items: IngestedItem[]; confidence: number }> {
+  processedDataUrl?: string,
+): Promise<{
+  text: string;
+  items: IngestedItem[];
+  confidence: number;
+  receipt: N2ReceiptOcrResponse;
+}> {
   onProgress?.(0.05, "Pré-traitement de l'image…");
-  const processed = await preprocessImageForOcr(file);
+  const processed = processedDataUrl ?? (await preprocessImageForOcr(file));
 
-  onProgress?.(0.15, "Chargement du moteur OCR…");
+  onProgress?.(0.2, "Envoi vers Ingress N2…");
+  const n2 = await postN2ReceiptOcr({ imageDataUrl: processed });
+  if (n2 && n2.items.length > 0) {
+    onProgress?.(1, "OCR N2 terminé");
+    const items = n2ReceiptToIngestedItems(n2);
+    return { text: "", items, confidence: n2.confidence, receipt: n2 };
+  }
+
+  onProgress?.(0.35, "Fallback OCR local…");
   const worker = await getWorker();
-
   const result = await worker.recognize(processed);
   onProgress?.(0.75, "Reconnaissance des caractères…");
 
@@ -73,12 +83,26 @@ export async function recognizeReceiptImage(
     ),
   }));
 
+  const receipt: N2ReceiptOcrResponse = {
+    merchant_name: null,
+    date_time: null,
+    items: items.map((item) => ({
+      raw_label: item.name,
+      quantity: item.quantity,
+      unit_price: null,
+      total_price: null,
+    })),
+    total_amount: null,
+    confidence: ocrConfidence,
+  };
+
   onProgress?.(1, "Terminé");
 
   return {
     text,
     items,
     confidence: ocrConfidence,
+    receipt,
   };
 }
 

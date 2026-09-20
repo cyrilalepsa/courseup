@@ -42,6 +42,15 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@shared": path.resolve(__dirname, "./shared"),
+    },
+  },
+  server: {
+    proxy: {
+      "/api": {
+        target: process.env.N2_DEV_PROXY ?? "http://localhost:3000",
+        changeOrigin: true,
+      },
     },
   },
 });

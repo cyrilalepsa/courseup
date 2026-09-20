@@ -84,5 +84,5 @@ export interface CourseUpContextValue {
   signInDemoNeriaPasskey: (userId?: string) => Promise<void>;
   switchNeriaDemoUser: (userId: string) => Promise<void>;
   signOutNeriaAuth: () => void;
-  reloadOrderFromHistory: (order: DispatchOrder) => void;
+  reloadOrderFromHistory: (order: DispatchOrder) => Promise<void>;
 }
