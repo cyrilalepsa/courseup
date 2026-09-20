@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "framer-motion": "^12.23.12",
+    "heic2any": "^0.0.4",
     "lucide-react": "^0.544.0",
     "pdfjs-dist": "^6.3.289",
     "qrcode.react": "^4.2.0",
