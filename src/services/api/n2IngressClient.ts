@@ -1,3 +1,4 @@
+import type { N2ReceiptOcrRequest, N2ReceiptOcrResponse } from "@shared/n2ReceiptOcr";
 import {
   N2_HEADERS,
   N2_TENANT_COURSEUP,
@@ -91,6 +92,15 @@ export async function syncN2Order(order: DispatchOrder): Promise<void> {
   await n2Fetch("/api/orders/sync", {
     method: "POST",
     body: JSON.stringify(order),
+  });
+}
+
+export async function postN2ReceiptOcr(
+  body: N2ReceiptOcrRequest,
+): Promise<N2ReceiptOcrResponse | null> {
+  return n2Fetch<N2ReceiptOcrResponse>("/api/ocr/receipt", {
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }
 

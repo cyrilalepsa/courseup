@@ -9,6 +9,7 @@ import {
   buildHistoryRowsFromOrderPayload,
   extractReloadItems,
 } from "../services/orderHistoryBuilder.js";
+import { processN2ReceiptOcr } from "../services/receiptOcrService.js";
 
 function claimsFromProfile(
   tenantId: string,
@@ -145,6 +146,30 @@ export function createN2ApiRouter(): Router {
     const store = getCourseUpStore();
     await store.upsertOrder(ctx.tenantId, ctx.userId, orderId, order, rows);
     res.json({ ok: true, orderId, entries: rows.length });
+  });
+
+  router.post("/ocr/receipt", async (req: N2Request, res) => {
+    const ctx = requireN2Context(req, res);
+    if (!ctx) return;
+    if (ctx.tenantId !== N2_TENANT_COURSEUP) {
+      res.status(403).json({ error: "tenant_forbidden" });
+      return;
+    }
+    const body = req.body as {
+      imageDataUrl?: string;
+      recognizedText?: string;
+      merchantHint?: string;
+    };
+    if (!body?.imageDataUrl && !body?.recognizedText) {
+      res.status(400).json({ error: "image_or_text_required" });
+      return;
+    }
+    const result = await processN2ReceiptOcr({
+      imageDataUrl: body.imageDataUrl ?? "",
+      recognizedText: body.recognizedText,
+      merchantHint: body.merchantHint,
+    });
+    res.json(result);
   });
 
   router.post("/subscription/bonus-app", async (req: N2Request, res) => {

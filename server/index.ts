@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   await bootstrapStore();
 
   const app = express();
-  app.use(express.json({ limit: "2mb" }));
+  app.use(express.json({ limit: "8mb" }));
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, ingress: "n2", tenant: "courseup" });

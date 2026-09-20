@@ -2,10 +2,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FileText, UploadCloud } from "lucide-react";
 import { useCallback, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import { parseUploadedFile } from "@/services/ocrService";
+import { TICKET_IMAGE_ACCEPT } from "@/services/ticketImagePipeline";
 import type { IngestedItem } from "@/types/ingestion";
 
-const ACCEPT =
-  ".pdf,.txt,.csv,.png,.jpg,.jpeg,application/pdf,text/plain,text/csv,image/png,image/jpeg";
+const ACCEPT = `.pdf,.txt,.csv,${TICKET_IMAGE_ACCEPT},application/pdf,text/plain,text/csv`;
 
 interface FileUploadZoneProps {
   onItemsExtracted: (items: IngestedItem[]) => void;
