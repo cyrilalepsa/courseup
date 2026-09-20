@@ -462,6 +462,12 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
       return [order, ...prev].slice(0, 50);
     });
     await appendOrder(order);
+    const { syncN2Order, isN2IngressConfigured } = await import(
+      "@/services/api/n2IngressClient"
+    );
+    if (isN2IngressConfigured()) {
+      await syncN2Order(order);
+    }
   }, []);
 
   const creditDispatchCompletion = useCallback(
@@ -629,7 +635,17 @@ export function CourseUpProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reloadOrderFromHistory = useCallback(
-    (order: DispatchOrder) => {
+    async (order: DispatchOrder) => {
+      const { reloadOrderViaN2Ingress, isN2IngressConfigured } = await import(
+        "@/services/api/n2IngressClient"
+      );
+      if (isN2IngressConfigured()) {
+        const remote = await reloadOrderViaN2Ingress(order.id);
+        if (remote?.items.length) {
+          setItems(remote.items);
+          return;
+        }
+      }
       const lines = [
         ...order.driveCheckouts.flatMap((checkout) => checkout.items),
         ...(order.selysVoucher?.items ?? []),

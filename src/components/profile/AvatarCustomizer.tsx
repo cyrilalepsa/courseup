@@ -76,8 +76,8 @@ export function AvatarCustomizer({ user, onSaved }: AvatarCustomizerProps) {
     reader.readAsDataURL(file);
   }, []);
 
-  const persist = useCallback(() => {
-    saveNeriaAvatar({
+  const persist = useCallback(async () => {
+    await saveNeriaAvatar({
       ...draft,
       updatedAt: new Date().toISOString(),
     });
@@ -217,7 +217,7 @@ export function AvatarCustomizer({ user, onSaved }: AvatarCustomizerProps) {
         ) : (
           <button
             type="button"
-            onClick={persist}
+            onClick={() => void persist()}
             className="neria-cta-n2o flex flex-1 items-center justify-center gap-1 py-2 text-xs"
           >
             <Check className="h-3.5 w-3.5" />
